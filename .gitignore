@@ -1,0 +1,18 @@
+# Never commit session transcripts or local secrets
+*.jsonl
+.env
+.env.*
+!app/.env.example
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+# Node / AppKit build output
+app/node_modules/
+app/dist/
+app/client/dist/
+app/.databricks/
+# Bundle state
+.databricks/
+# OS
+.DS_Store

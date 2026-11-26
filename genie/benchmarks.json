@@ -1,0 +1,88 @@
+[
+  {
+    "id": "B01",
+    "question": "How much appealable revenue is at deadline risk this week by payer?",
+    "expected_sql": "SELECT payer, MEASURE(`Revenue At Deadline Risk`) AS at_risk_revenue FROM appeals_hackathon_catalog.fe_bar_appeals.appeals_metrics GROUP BY ALL ORDER BY at_risk_revenue DESC",
+    "role": "VP Revenue Cycle"
+  },
+  {
+    "id": "B02",
+    "question": "Which payer has the most CO50 denials?",
+    "expected_sql": "SELECT payer, MEASURE(`Denials In Worklist`) AS co50_denials FROM appeals_hackathon_catalog.fe_bar_appeals.appeals_metrics WHERE denial_code = 'CO50' GROUP BY ALL ORDER BY co50_denials DESC LIMIT 1",
+    "role": "General analyst"
+  },
+  {
+    "id": "B03",
+    "question": "What is the status of the claim for Elena Marquez?",
+    "expected_sql": "SELECT patient_name, payer_name, denial_code, deadline_status, days_remaining, expected_reimbursement FROM appeals_hackathon_catalog.fe_bar_appeals.gold_denial_worklist WHERE patient_name = 'Elena Marquez'",
+    "role": "General analyst"
+  },
+  {
+    "id": "B04",
+    "question": "What share of appeals were routed to NEEDS REVIEW, and why?",
+    "expected_sql": "SELECT COALESCE(needs_review_reason, 'NO REASON RECORDED') AS needs_review_reason, COUNT(*) AS appeals FROM appeals_hackathon_catalog.fe_bar_appeals.appeals_output WHERE recommendation = 'NEEDS REVIEW' GROUP BY ALL ORDER BY appeals DESC",
+    "needs_appeals": true,
+    "role": "CDAIO"
+  },
+  {
+    "id": "B05",
+    "question": "What is the warranted rate by payer type?",
+    "expected_sql": "SELECT payer_type, MEASURE(`Warranted Rate`) AS warranted_rate FROM appeals_hackathon_catalog.fe_bar_appeals.appeals_metrics GROUP BY ALL ORDER BY ALL",
+    "needs_appeals": true,
+    "role": "VP Revenue Cycle"
+  },
+  {
+    "id": "B06",
+    "question": "How many denials were logged as NEW (denied yesterday)?",
+    "expected_sql": "SELECT MEASURE(`Denials In Worklist`) AS new_denials FROM appeals_hackathon_catalog.fe_bar_appeals.appeals_metrics WHERE worklist_tag = 'NEW'",
+    "role": "Director of Denial Management"
+  },
+  {
+    "id": "B07",
+    "question": "What is the cost per appeal?",
+    "expected_sql": "SELECT MEASURE(`Cost Per Appeal (ESTIMATE)`) AS cost_per_appeal_estimate_usd FROM appeals_hackathon_catalog.fe_bar_appeals.appeals_metrics",
+    "role": "CDAIO"
+  },
+  {
+    "id": "B08",
+    "question": "How much expected reimbursement was lost to missed appeal deadlines by payer?",
+    "expected_sql": "SELECT payer, MEASURE(`Revenue Lost To Deadline`) AS lost_revenue FROM appeals_hackathon_catalog.fe_bar_appeals.appeals_metrics GROUP BY ALL ORDER BY lost_revenue DESC",
+    "role": "VP Revenue Cycle"
+  },
+  {
+    "id": "B09",
+    "question": "Which 5 encounters have the highest priority score and are still appealable?",
+    "expected_sql": "SELECT FACILITY_ID, PATIENT_CONTROL_NUMBER, ENCOUNTER_NBR, payer_name, denial_code, priority_rank, priority_score FROM appeals_hackathon_catalog.fe_bar_appeals.gold_denial_worklist WHERE deadline_status <> 'PAST_DUE' ORDER BY priority_score DESC LIMIT 5",
+    "role": "VP Revenue Cycle"
+  },
+  {
+    "id": "B10",
+    "question": "How does expected reimbursement compare with total charges by denial code?",
+    "expected_sql": "SELECT denial_code, SUM(expected_reimbursement) AS expected_reimbursement, SUM(total_charges) AS total_charges FROM appeals_hackathon_catalog.fe_bar_appeals.gold_denial_worklist GROUP BY denial_code ORDER BY denial_code",
+    "role": "CFO"
+  },
+  {
+    "id": "B11",
+    "question": "What share of reviewed appeals were approved, meaning submitted?",
+    "expected_sql": "SELECT MEASURE(`Reviewed Encounters`) AS reviewed, MEASURE(`Approval Rate`) AS approval_rate FROM appeals_hackathon_catalog.fe_bar_appeals.appeals_metrics",
+    "role": "Director of Denial Management"
+  },
+  {
+    "id": "B12",
+    "role": "CFO",
+    "question": "What is the illustrative recoverable revenue by payer?",
+    "expected_sql": "SELECT payer, MEASURE(`Illustrative Recoverable Revenue (Prototype)`) AS illustrative_recoverable FROM appeals_hackathon_catalog.fe_bar_appeals.appeals_metrics GROUP BY ALL ORDER BY illustrative_recoverable DESC"
+  },
+  {
+    "id": "B13",
+    "role": "Director of Denial Management",
+    "question": "How many denials are in the backlog by worklist tag?",
+    "expected_sql": "SELECT worklist_tag, MEASURE(`Denials In Worklist`) AS denials FROM appeals_hackathon_catalog.fe_bar_appeals.appeals_metrics GROUP BY ALL ORDER BY denials DESC"
+  },
+  {
+    "id": "B14",
+    "role": "CDAIO",
+    "question": "What is the AI accuracy and unsafe rate of the latest evaluation run?",
+    "expected_sql": "SELECT accuracy, unsafe_rate FROM appeals_hackathon_catalog.fe_bar_appeals.eval_summary ORDER BY run_ts DESC LIMIT 1"
+  }
+]

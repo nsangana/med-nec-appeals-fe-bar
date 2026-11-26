@@ -1,0 +1,74 @@
+bundle:
+  name: fe-bar-appeals-app
+
+variables:
+  sql_warehouse_id:
+    description: SQL Warehouse ID
+  files_securable:
+    description: Full UC name of the appeal PDF volume (catalog.schema.volume)
+  serving_endpoint_name:
+    description: Serving endpoint name (FE Bar appeals chat ResponsesAgent)
+  lakebase_database:
+    description: Lakebase database resource path (projects/<project>/branches/<branch>/databases/<db>)
+  lakebase_branch:
+    description: Lakebase branch resource path (projects/<project>/branches/<branch>)
+  genie_space_id:
+    description: Genie space id (leave empty until the space exists; the genie-space resource is only added when set)
+
+resources:
+  apps:
+    app:
+      name: "fe-bar-appeals-app"
+      description: "FE Bar medical-necessity appeals worklist: Lakebase worklist and review actions, case-file PDFs, appeals agent, optional Genie."
+      source_code_path: ./
+
+      # User-authorization (OBO) scopes: SQL, serving and files are forwarded as the signed-in user,
+      # so UC reads (appeal text, PDFs, chat) are enforced against the END USER's grants.
+      # Lakebase reads/writes run as the app service principal (see lakebase/AUTH.md).
+      # genie: the Genie plugin calls the Genie Conversation API on behalf of the user.
+      # NOTE: bundle deploy is flaky on this host; scopes are applied with `databricks apps create-update` (see evidence/06_app.md).
+      user_api_scopes:
+        - sql
+        - model-serving
+        - files
+        - genie   # Genie Conversation API (dashboards.genie is deprecated). Scope changes need an app redeploy + user re-consent.
+
+      # Declared resources are auto-granted to the app service principal on deploy.
+      resources:
+        - name: sql-warehouse
+          sql_warehouse:
+            id: ${var.sql_warehouse_id}
+            permission: CAN_USE
+        - name: files
+          uc_securable:
+            securable_full_name: ${var.files_securable}
+            securable_type: VOLUME
+            permission: READ_VOLUME
+        - name: serving-endpoint
+          serving_endpoint:
+            name: ${var.serving_endpoint_name}
+            permission: CAN_QUERY
+        - name: postgres
+          postgres:
+            branch: ${var.lakebase_branch}
+            database: ${var.lakebase_database}
+            permission: CAN_CONNECT_AND_CREATE
+        - name: genie-space
+          genie_space:
+            name: fe-bar-appeals-genie
+            space_id: ${var.genie_space_id}
+            permission: CAN_RUN
+
+targets:
+  default:
+    default: true
+    workspace:
+      host: https://fevm-appeals-hackathon.cloud.databricks.com
+
+    variables:
+      sql_warehouse_id: 559faf81d610a2a1
+      files_securable: appeals_hackathon_catalog.fe_bar_appeals.appeal_pdfs
+      serving_endpoint_name: fe-bar-appeals-chat
+      lakebase_branch: projects/fe-bar-appeals-lakebase/branches/production
+      lakebase_database: projects/fe-bar-appeals-lakebase/branches/production/databases/appeals
+      genie_space_id: 01f1e7ec913217158b231c3e2f18fa20

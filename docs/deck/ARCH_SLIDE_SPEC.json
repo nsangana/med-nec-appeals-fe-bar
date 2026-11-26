@@ -1,0 +1,1313 @@
+{
+  "schema": "arch_slide_spec/1",
+  "purpose": "Reference-architecture slide; replaces the 'Why a unified Databricks platform' slide (DECK slide 8). Built on a scratch deck first, then dropped into the v2 deck.",
+  "page": {
+    "width_emu": 9144000,
+    "height_emu": 5143500,
+    "width_in": 10,
+    "height_in": 5.625,
+    "aspect": "16:9",
+    "background_fill": "#FFFFFF",
+    "layout": "BLANK"
+  },
+  "font": {
+    "family": "DM Sans",
+    "note": "DM Sans throughout (DESIGN_NOTES rule 1); all text is native text in shapes or text boxes"
+  },
+  "palette": {
+    "source": "ocean light palette from databricks-industry-solutions/databricks-reference-architecture app/index.html (body.pal-ocean and :root group slots); brand red #FF3621 for the accent rule (DESIGN_NOTES)",
+    "hex": {
+      "ink": "#1B1F24",
+      "muted": "#5B6570",
+      "white": "#FFFFFF",
+      "brand": "#FF3621",
+      "blue_line": "#369091",
+      "blue_head": "#408081",
+      "blue_bd": "#B6E2E2",
+      "blue_bg": "#EFFBFB",
+      "blue_tile": "#D8F5F5",
+      "blue_ink": "#2F7779",
+      "slate_head": "#40817D",
+      "slate_line": "#557270",
+      "slate_bd": "#C5D3D2",
+      "slate_bg": "#F3F7F7",
+      "slate_ink": "#4A6361",
+      "green_head": "#528240",
+      "green_bd": "#C2E2B6",
+      "green_bg": "#F2FBEF",
+      "green_ink": "#43792F",
+      "amber_line": "#913636",
+      "amber_bd": "#E2B6B6",
+      "amber_bg": "#FBEFEF",
+      "amber_ink": "#7D3131",
+      "arrow": "#5B6570"
+    }
+  },
+  "reference_borrowed": [
+    "Layered zones: a pale-filled, outlined platform band framed by source and outcome columns",
+    "Colour-coded group heads: solid head bar with white text, pale body fill, saturated outline (ocean group slots)",
+    "Numbered stage stack on a single spine, read top to bottom, with a dashed gate for the human step",
+    "Flow arrows only in the gutters between layers; no decorative icons"
+  ],
+  "grid_in": {
+    "margin_x": 0.4,
+    "headline_y": 0.28,
+    "accent_rule_y": 1.13,
+    "head_y": 1.4,
+    "zone_y": 1.85,
+    "zone_h": 3.12,
+    "footer_y": 5.2,
+    "columns": {
+      "sources": [
+        0.4,
+        2.0
+      ],
+      "platform": [
+        2.75,
+        4.5
+      ],
+      "outcomes": [
+        7.6,
+        2.0
+      ]
+    }
+  },
+  "elements": [
+    {
+      "id": "headline",
+      "type": "text",
+      "shape": "TEXT_BOX",
+      "geometry_in": {
+        "x": 0.4,
+        "y": 0.28,
+        "w": 9.2,
+        "h": 0.8
+      },
+      "geometry_emu": {
+        "x": 365760,
+        "y": 256032,
+        "w": 8412480,
+        "h": 731520
+      },
+      "fill": null,
+      "line": {
+        "none": true
+      },
+      "text_anchor": "TOP",
+      "paragraphs": [
+        {
+          "align": "START",
+          "runs": [
+            {
+              "text": "One governed platform turns three disconnected systems into a daily appeal worklist",
+              "size_pt": 20,
+              "bold": true,
+              "color": "#1B1F24",
+              "font": "DM Sans"
+            }
+          ],
+          "line_spacing_pct": 90
+        }
+      ],
+      "z": 1
+    },
+    {
+      "id": "accent_rule",
+      "type": "shape",
+      "shape": "RECTANGLE",
+      "geometry_in": {
+        "x": 0.4,
+        "y": 1.13,
+        "w": 0.55,
+        "h": 0.05
+      },
+      "geometry_emu": {
+        "x": 365760,
+        "y": 1033272,
+        "w": 502920,
+        "h": 45720
+      },
+      "fill": "#FF3621",
+      "line": {
+        "none": true
+      },
+      "text_anchor": "MIDDLE",
+      "paragraphs": [],
+      "z": 2
+    },
+    {
+      "id": "head_sources",
+      "type": "shape",
+      "shape": "RECTANGLE",
+      "geometry_in": {
+        "x": 0.4,
+        "y": 1.4,
+        "w": 2.0,
+        "h": 0.32
+      },
+      "geometry_emu": {
+        "x": 365760,
+        "y": 1280160,
+        "w": 1828800,
+        "h": 292608
+      },
+      "fill": "#557270",
+      "line": {
+        "none": true
+      },
+      "text_anchor": "MIDDLE",
+      "paragraphs": [
+        {
+          "align": "START",
+          "runs": [
+            {
+              "text": "SOURCES",
+              "size_pt": 10,
+              "bold": true,
+              "color": "#FFFFFF",
+              "font": "DM Sans"
+            }
+          ]
+        }
+      ],
+      "z": 3
+    },
+    {
+      "id": "head_platform",
+      "type": "shape",
+      "shape": "RECTANGLE",
+      "geometry_in": {
+        "x": 2.75,
+        "y": 1.4,
+        "w": 4.5,
+        "h": 0.32
+      },
+      "geometry_emu": {
+        "x": 2514600,
+        "y": 1280160,
+        "w": 4114800,
+        "h": 292608
+      },
+      "fill": "#408081",
+      "line": {
+        "none": true
+      },
+      "text_anchor": "MIDDLE",
+      "paragraphs": [
+        {
+          "align": "START",
+          "runs": [
+            {
+              "text": "DATABRICKS PLATFORM ON AWS",
+              "size_pt": 10,
+              "bold": true,
+              "color": "#FFFFFF",
+              "font": "DM Sans"
+            }
+          ]
+        }
+      ],
+      "z": 4
+    },
+    {
+      "id": "head_outcomes",
+      "type": "shape",
+      "shape": "RECTANGLE",
+      "geometry_in": {
+        "x": 7.6,
+        "y": 1.4,
+        "w": 2.0,
+        "h": 0.32
+      },
+      "geometry_emu": {
+        "x": 6949440,
+        "y": 1280160,
+        "w": 1828800,
+        "h": 292608
+      },
+      "fill": "#528240",
+      "line": {
+        "none": true
+      },
+      "text_anchor": "MIDDLE",
+      "paragraphs": [
+        {
+          "align": "START",
+          "runs": [
+            {
+              "text": "OUTCOMES",
+              "size_pt": 10,
+              "bold": true,
+              "color": "#FFFFFF",
+              "font": "DM Sans"
+            }
+          ]
+        }
+      ],
+      "z": 5
+    },
+    {
+      "id": "band_platform",
+      "type": "shape",
+      "shape": "RECTANGLE",
+      "geometry_in": {
+        "x": 2.75,
+        "y": 1.85,
+        "w": 4.5,
+        "h": 3.12
+      },
+      "geometry_emu": {
+        "x": 2514600,
+        "y": 1691640,
+        "w": 4114800,
+        "h": 2852928
+      },
+      "fill": "#EFFBFB",
+      "line": {
+        "color": "#369091",
+        "weight_pt": 1.0,
+        "dash": null
+      },
+      "text_anchor": "MIDDLE",
+      "paragraphs": [],
+      "z": 6
+    },
+    {
+      "id": "src_1",
+      "type": "shape",
+      "shape": "RECTANGLE",
+      "geometry_in": {
+        "x": 0.4,
+        "y": 1.85,
+        "w": 2.0,
+        "h": 0.92
+      },
+      "geometry_emu": {
+        "x": 365760,
+        "y": 1691640,
+        "w": 1828800,
+        "h": 841248
+      },
+      "fill": "#F3F7F7",
+      "line": {
+        "color": "#C5D3D2",
+        "weight_pt": 1.0,
+        "dash": null
+      },
+      "text_anchor": "MIDDLE",
+      "paragraphs": [
+        {
+          "align": "START",
+          "runs": [
+            {
+              "text": "Denials and claims",
+              "size_pt": 12,
+              "bold": true,
+              "color": "#1B1F24",
+              "font": "DM Sans"
+            }
+          ],
+          "line_spacing_pct": 100
+        },
+        {
+          "align": "START",
+          "runs": [
+            {
+              "text": "835 / 837 files",
+              "size_pt": 9,
+              "bold": false,
+              "color": "#4A6361",
+              "font": "DM Sans"
+            }
+          ]
+        }
+      ],
+      "z": 7
+    },
+    {
+      "id": "src_2",
+      "type": "shape",
+      "shape": "RECTANGLE",
+      "geometry_in": {
+        "x": 0.4,
+        "y": 2.95,
+        "w": 2.0,
+        "h": 0.92
+      },
+      "geometry_emu": {
+        "x": 365760,
+        "y": 2697480,
+        "w": 1828800,
+        "h": 841248
+      },
+      "fill": "#F3F7F7",
+      "line": {
+        "color": "#C5D3D2",
+        "weight_pt": 1.0,
+        "dash": null
+      },
+      "text_anchor": "MIDDLE",
+      "paragraphs": [
+        {
+          "align": "START",
+          "runs": [
+            {
+              "text": "Clinical notes",
+              "size_pt": 12,
+              "bold": true,
+              "color": "#1B1F24",
+              "font": "DM Sans"
+            }
+          ],
+          "line_spacing_pct": 100
+        },
+        {
+          "align": "START",
+          "runs": [
+            {
+              "text": "EHR",
+              "size_pt": 9,
+              "bold": false,
+              "color": "#4A6361",
+              "font": "DM Sans"
+            }
+          ]
+        }
+      ],
+      "z": 8
+    },
+    {
+      "id": "src_3",
+      "type": "shape",
+      "shape": "RECTANGLE",
+      "geometry_in": {
+        "x": 0.4,
+        "y": 4.050000000000001,
+        "w": 2.0,
+        "h": 0.92
+      },
+      "geometry_emu": {
+        "x": 365760,
+        "y": 3703320,
+        "w": 1828800,
+        "h": 841248
+      },
+      "fill": "#F3F7F7",
+      "line": {
+        "color": "#C5D3D2",
+        "weight_pt": 1.0,
+        "dash": null
+      },
+      "text_anchor": "MIDDLE",
+      "paragraphs": [
+        {
+          "align": "START",
+          "runs": [
+            {
+              "text": "Payer criteria and CMS references",
+              "size_pt": 12,
+              "bold": true,
+              "color": "#1B1F24",
+              "font": "DM Sans"
+            }
+          ],
+          "line_spacing_pct": 100
+        },
+        {
+          "align": "START",
+          "runs": [
+            {
+              "text": "PDF, XLSX",
+              "size_pt": 9,
+              "bold": false,
+              "color": "#4A6361",
+              "font": "DM Sans"
+            }
+          ]
+        }
+      ],
+      "z": 9
+    },
+    {
+      "id": "card_1",
+      "type": "shape",
+      "shape": "RECTANGLE",
+      "geometry_in": {
+        "x": 7.6,
+        "y": 1.85,
+        "w": 2.0,
+        "h": 0.7050000000000001
+      },
+      "geometry_emu": {
+        "x": 6949440,
+        "y": 1691640,
+        "w": 1828800,
+        "h": 644652
+      },
+      "fill": "#F2FBEF",
+      "line": {
+        "color": "#C2E2B6",
+        "weight_pt": 1.0,
+        "dash": null
+      },
+      "text_anchor": "MIDDLE",
+      "paragraphs": [
+        {
+          "align": "START",
+          "runs": [
+            {
+              "text": "Every morning",
+              "size_pt": 14,
+              "bold": true,
+              "color": "#43792F",
+              "font": "DM Sans"
+            }
+          ]
+        },
+        {
+          "align": "START",
+          "runs": [
+            {
+              "text": "worklist ready",
+              "size_pt": 10,
+              "bold": false,
+              "color": "#1B1F24",
+              "font": "DM Sans"
+            }
+          ]
+        }
+      ],
+      "z": 10
+    },
+    {
+      "id": "card_2",
+      "type": "shape",
+      "shape": "RECTANGLE",
+      "geometry_in": {
+        "x": 7.6,
+        "y": 2.6550000000000002,
+        "w": 2.0,
+        "h": 0.7050000000000001
+      },
+      "geometry_emu": {
+        "x": 6949440,
+        "y": 2427732,
+        "w": 1828800,
+        "h": 644652
+      },
+      "fill": "#F2FBEF",
+      "line": {
+        "color": "#C2E2B6",
+        "weight_pt": 1.0,
+        "dash": null
+      },
+      "text_anchor": "MIDDLE",
+      "paragraphs": [
+        {
+          "align": "START",
+          "runs": [
+            {
+              "text": "$2M–$4M a year",
+              "size_pt": 14,
+              "bold": true,
+              "color": "#43792F",
+              "font": "DM Sans"
+            }
+          ]
+        },
+        {
+          "align": "START",
+          "runs": [
+            {
+              "text": "earned, illustrative",
+              "size_pt": 10,
+              "bold": false,
+              "color": "#1B1F24",
+              "font": "DM Sans"
+            }
+          ]
+        }
+      ],
+      "z": 11
+    },
+    {
+      "id": "card_3",
+      "type": "shape",
+      "shape": "RECTANGLE",
+      "geometry_in": {
+        "x": 7.6,
+        "y": 3.46,
+        "w": 2.0,
+        "h": 0.7050000000000001
+      },
+      "geometry_emu": {
+        "x": 6949440,
+        "y": 3163824,
+        "w": 1828800,
+        "h": 644652
+      },
+      "fill": "#F2FBEF",
+      "line": {
+        "color": "#C2E2B6",
+        "weight_pt": 1.0,
+        "dash": null
+      },
+      "text_anchor": "MIDDLE",
+      "paragraphs": [
+        {
+          "align": "START",
+          "runs": [
+            {
+              "text": "About 50¢",
+              "size_pt": 14,
+              "bold": true,
+              "color": "#43792F",
+              "font": "DM Sans"
+            }
+          ]
+        },
+        {
+          "align": "START",
+          "runs": [
+            {
+              "text": "per appeal, prototype",
+              "size_pt": 10,
+              "bold": false,
+              "color": "#1B1F24",
+              "font": "DM Sans"
+            }
+          ]
+        }
+      ],
+      "z": 12
+    },
+    {
+      "id": "card_4",
+      "type": "shape",
+      "shape": "RECTANGLE",
+      "geometry_in": {
+        "x": 7.6,
+        "y": 4.265000000000001,
+        "w": 2.0,
+        "h": 0.7050000000000001
+      },
+      "geometry_emu": {
+        "x": 6949440,
+        "y": 3899916,
+        "w": 1828800,
+        "h": 644652
+      },
+      "fill": "#F2FBEF",
+      "line": {
+        "color": "#C2E2B6",
+        "weight_pt": 1.0,
+        "dash": null
+      },
+      "text_anchor": "MIDDLE",
+      "paragraphs": [
+        {
+          "align": "START",
+          "runs": [
+            {
+              "text": "97% accurate",
+              "size_pt": 14,
+              "bold": true,
+              "color": "#43792F",
+              "font": "DM Sans"
+            }
+          ]
+        },
+        {
+          "align": "START",
+          "runs": [
+            {
+              "text": "0% unsafe calls",
+              "size_pt": 10,
+              "bold": false,
+              "color": "#1B1F24",
+              "font": "DM Sans"
+            }
+          ]
+        }
+      ],
+      "z": 13
+    },
+    {
+      "id": "spine",
+      "type": "line",
+      "geometry_in": {
+        "x": 3.11,
+        "y": 2.1500000000000004,
+        "w": 0.0,
+        "h": 2.0999999999999996
+      },
+      "geometry_emu": {
+        "x": 2843784,
+        "y": 1965960,
+        "w": 0,
+        "h": 1920240
+      },
+      "from_in": [
+        3.11,
+        2.1500000000000004
+      ],
+      "to_in": [
+        3.11,
+        4.25
+      ],
+      "line": {
+        "color": "#369091",
+        "weight_pt": 1.5,
+        "end_arrow": null
+      },
+      "z": 14
+    },
+    {
+      "id": "stage_1",
+      "type": "shape",
+      "shape": "RECTANGLE",
+      "geometry_in": {
+        "x": 3.37,
+        "y": 1.9900000000000002,
+        "w": 3.7399999999999998,
+        "h": 0.32
+      },
+      "geometry_emu": {
+        "x": 3081528,
+        "y": 1819656,
+        "w": 3419856,
+        "h": 292608
+      },
+      "fill": "#D8F5F5",
+      "line": {
+        "none": true
+      },
+      "text_anchor": "MIDDLE",
+      "paragraphs": [
+        {
+          "align": "START",
+          "runs": [
+            {
+              "text": "Ingest",
+              "size_pt": 11,
+              "bold": true,
+              "color": "#1B1F24",
+              "font": "DM Sans"
+            },
+            {
+              "text": "  ·  Lakeflow",
+              "size_pt": 11,
+              "bold": false,
+              "color": "#2F7779",
+              "font": "DM Sans"
+            }
+          ]
+        }
+      ],
+      "z": 15
+    },
+    {
+      "id": "num_1",
+      "type": "shape",
+      "shape": "ELLIPSE",
+      "geometry_in": {
+        "x": 2.9699999999999998,
+        "y": 2.0100000000000002,
+        "w": 0.28,
+        "h": 0.28
+      },
+      "geometry_emu": {
+        "x": 2715768,
+        "y": 1837944,
+        "w": 256032,
+        "h": 256032
+      },
+      "fill": "#408081",
+      "line": {
+        "none": true
+      },
+      "text_anchor": "MIDDLE",
+      "paragraphs": [
+        {
+          "align": "CENTER",
+          "runs": [
+            {
+              "text": "1",
+              "size_pt": 10,
+              "bold": true,
+              "color": "#FFFFFF",
+              "font": "DM Sans"
+            }
+          ]
+        }
+      ],
+      "z": 16
+    },
+    {
+      "id": "stage_2",
+      "type": "shape",
+      "shape": "RECTANGLE",
+      "geometry_in": {
+        "x": 3.37,
+        "y": 2.41,
+        "w": 3.7399999999999998,
+        "h": 0.32
+      },
+      "geometry_emu": {
+        "x": 3081528,
+        "y": 2203704,
+        "w": 3419856,
+        "h": 292608
+      },
+      "fill": "#D8F5F5",
+      "line": {
+        "none": true
+      },
+      "text_anchor": "MIDDLE",
+      "paragraphs": [
+        {
+          "align": "START",
+          "runs": [
+            {
+              "text": "Govern",
+              "size_pt": 11,
+              "bold": true,
+              "color": "#1B1F24",
+              "font": "DM Sans"
+            },
+            {
+              "text": "  ·  Unity Catalog",
+              "size_pt": 11,
+              "bold": false,
+              "color": "#2F7779",
+              "font": "DM Sans"
+            }
+          ]
+        }
+      ],
+      "z": 17
+    },
+    {
+      "id": "num_2",
+      "type": "shape",
+      "shape": "ELLIPSE",
+      "geometry_in": {
+        "x": 2.9699999999999998,
+        "y": 2.43,
+        "w": 0.28,
+        "h": 0.28
+      },
+      "geometry_emu": {
+        "x": 2715768,
+        "y": 2221992,
+        "w": 256032,
+        "h": 256032
+      },
+      "fill": "#408081",
+      "line": {
+        "none": true
+      },
+      "text_anchor": "MIDDLE",
+      "paragraphs": [
+        {
+          "align": "CENTER",
+          "runs": [
+            {
+              "text": "2",
+              "size_pt": 10,
+              "bold": true,
+              "color": "#FFFFFF",
+              "font": "DM Sans"
+            }
+          ]
+        }
+      ],
+      "z": 18
+    },
+    {
+      "id": "stage_3",
+      "type": "shape",
+      "shape": "RECTANGLE",
+      "geometry_in": {
+        "x": 3.37,
+        "y": 2.83,
+        "w": 3.7399999999999998,
+        "h": 0.32
+      },
+      "geometry_emu": {
+        "x": 3081528,
+        "y": 2587752,
+        "w": 3419856,
+        "h": 292608
+      },
+      "fill": "#D8F5F5",
+      "line": {
+        "none": true
+      },
+      "text_anchor": "MIDDLE",
+      "paragraphs": [
+        {
+          "align": "START",
+          "runs": [
+            {
+              "text": "Reason",
+              "size_pt": 11,
+              "bold": true,
+              "color": "#1B1F24",
+              "font": "DM Sans"
+            },
+            {
+              "text": "  ·  Mosaic AI (ai_query, LLM judge)",
+              "size_pt": 11,
+              "bold": false,
+              "color": "#2F7779",
+              "font": "DM Sans"
+            }
+          ]
+        }
+      ],
+      "z": 19
+    },
+    {
+      "id": "num_3",
+      "type": "shape",
+      "shape": "ELLIPSE",
+      "geometry_in": {
+        "x": 2.9699999999999998,
+        "y": 2.85,
+        "w": 0.28,
+        "h": 0.28
+      },
+      "geometry_emu": {
+        "x": 2715768,
+        "y": 2606040,
+        "w": 256032,
+        "h": 256032
+      },
+      "fill": "#408081",
+      "line": {
+        "none": true
+      },
+      "text_anchor": "MIDDLE",
+      "paragraphs": [
+        {
+          "align": "CENTER",
+          "runs": [
+            {
+              "text": "3",
+              "size_pt": 10,
+              "bold": true,
+              "color": "#FFFFFF",
+              "font": "DM Sans"
+            }
+          ]
+        }
+      ],
+      "z": 20
+    },
+    {
+      "id": "stage_4",
+      "type": "shape",
+      "shape": "RECTANGLE",
+      "geometry_in": {
+        "x": 3.37,
+        "y": 3.25,
+        "w": 3.7399999999999998,
+        "h": 0.32
+      },
+      "geometry_emu": {
+        "x": 3081528,
+        "y": 2971800,
+        "w": 3419856,
+        "h": 292608
+      },
+      "fill": "#D8F5F5",
+      "line": {
+        "none": true
+      },
+      "text_anchor": "MIDDLE",
+      "paragraphs": [
+        {
+          "align": "START",
+          "runs": [
+            {
+              "text": "Serve",
+              "size_pt": 11,
+              "bold": true,
+              "color": "#1B1F24",
+              "font": "DM Sans"
+            },
+            {
+              "text": "  ·  Lakebase",
+              "size_pt": 11,
+              "bold": false,
+              "color": "#2F7779",
+              "font": "DM Sans"
+            }
+          ]
+        }
+      ],
+      "z": 21
+    },
+    {
+      "id": "num_4",
+      "type": "shape",
+      "shape": "ELLIPSE",
+      "geometry_in": {
+        "x": 2.9699999999999998,
+        "y": 3.27,
+        "w": 0.28,
+        "h": 0.28
+      },
+      "geometry_emu": {
+        "x": 2715768,
+        "y": 2990088,
+        "w": 256032,
+        "h": 256032
+      },
+      "fill": "#408081",
+      "line": {
+        "none": true
+      },
+      "text_anchor": "MIDDLE",
+      "paragraphs": [
+        {
+          "align": "CENTER",
+          "runs": [
+            {
+              "text": "4",
+              "size_pt": 10,
+              "bold": true,
+              "color": "#FFFFFF",
+              "font": "DM Sans"
+            }
+          ]
+        }
+      ],
+      "z": 22
+    },
+    {
+      "id": "stage_5",
+      "type": "shape",
+      "shape": "RECTANGLE",
+      "geometry_in": {
+        "x": 3.37,
+        "y": 3.67,
+        "w": 3.7399999999999998,
+        "h": 0.32
+      },
+      "geometry_emu": {
+        "x": 3081528,
+        "y": 3355848,
+        "w": 3419856,
+        "h": 292608
+      },
+      "fill": "#D8F5F5",
+      "line": {
+        "none": true
+      },
+      "text_anchor": "MIDDLE",
+      "paragraphs": [
+        {
+          "align": "START",
+          "runs": [
+            {
+              "text": "Ask",
+              "size_pt": 11,
+              "bold": true,
+              "color": "#1B1F24",
+              "font": "DM Sans"
+            },
+            {
+              "text": "  ·  Genie Agent",
+              "size_pt": 11,
+              "bold": false,
+              "color": "#2F7779",
+              "font": "DM Sans"
+            }
+          ]
+        }
+      ],
+      "z": 23
+    },
+    {
+      "id": "num_5",
+      "type": "shape",
+      "shape": "ELLIPSE",
+      "geometry_in": {
+        "x": 2.9699999999999998,
+        "y": 3.69,
+        "w": 0.28,
+        "h": 0.28
+      },
+      "geometry_emu": {
+        "x": 2715768,
+        "y": 3374136,
+        "w": 256032,
+        "h": 256032
+      },
+      "fill": "#408081",
+      "line": {
+        "none": true
+      },
+      "text_anchor": "MIDDLE",
+      "paragraphs": [
+        {
+          "align": "CENTER",
+          "runs": [
+            {
+              "text": "5",
+              "size_pt": 10,
+              "bold": true,
+              "color": "#FFFFFF",
+              "font": "DM Sans"
+            }
+          ]
+        }
+      ],
+      "z": 24
+    },
+    {
+      "id": "stage_6",
+      "type": "shape",
+      "shape": "RECTANGLE",
+      "geometry_in": {
+        "x": 3.37,
+        "y": 4.09,
+        "w": 3.7399999999999998,
+        "h": 0.32
+      },
+      "geometry_emu": {
+        "x": 3081528,
+        "y": 3739896,
+        "w": 3419856,
+        "h": 292608
+      },
+      "fill": "#D8F5F5",
+      "line": {
+        "none": true
+      },
+      "text_anchor": "MIDDLE",
+      "paragraphs": [
+        {
+          "align": "START",
+          "runs": [
+            {
+              "text": "Act",
+              "size_pt": 11,
+              "bold": true,
+              "color": "#1B1F24",
+              "font": "DM Sans"
+            },
+            {
+              "text": "  ·  Databricks App and chat agent",
+              "size_pt": 11,
+              "bold": false,
+              "color": "#2F7779",
+              "font": "DM Sans"
+            }
+          ]
+        }
+      ],
+      "z": 25
+    },
+    {
+      "id": "num_6",
+      "type": "shape",
+      "shape": "ELLIPSE",
+      "geometry_in": {
+        "x": 2.9699999999999998,
+        "y": 4.109999999999999,
+        "w": 0.28,
+        "h": 0.28
+      },
+      "geometry_emu": {
+        "x": 2715768,
+        "y": 3758184,
+        "w": 256032,
+        "h": 256032
+      },
+      "fill": "#408081",
+      "line": {
+        "none": true
+      },
+      "text_anchor": "MIDDLE",
+      "paragraphs": [
+        {
+          "align": "CENTER",
+          "runs": [
+            {
+              "text": "6",
+              "size_pt": 10,
+              "bold": true,
+              "color": "#FFFFFF",
+              "font": "DM Sans"
+            }
+          ]
+        }
+      ],
+      "z": 26
+    },
+    {
+      "id": "gate_human",
+      "type": "shape",
+      "shape": "RECTANGLE",
+      "geometry_in": {
+        "x": 3.37,
+        "y": 4.55,
+        "w": 3.7399999999999998,
+        "h": 0.3
+      },
+      "geometry_emu": {
+        "x": 3081528,
+        "y": 4160520,
+        "w": 3419856,
+        "h": 274320
+      },
+      "fill": "#FBEFEF",
+      "line": {
+        "color": "#913636",
+        "weight_pt": 1.0,
+        "dash": "DASH"
+      },
+      "text_anchor": "MIDDLE",
+      "paragraphs": [
+        {
+          "align": "CENTER",
+          "runs": [
+            {
+              "text": "Human approval: ",
+              "size_pt": 10,
+              "bold": true,
+              "color": "#7D3131",
+              "font": "DM Sans"
+            },
+            {
+              "text": "a reviewer approves every letter",
+              "size_pt": 10,
+              "bold": false,
+              "color": "#7D3131",
+              "font": "DM Sans"
+            }
+          ]
+        }
+      ],
+      "z": 27
+    },
+    {
+      "id": "arrow_in",
+      "type": "arrow",
+      "geometry_in": {
+        "x": 2.44,
+        "y": 3.41,
+        "w": 0.27,
+        "h": 0.0
+      },
+      "geometry_emu": {
+        "x": 2231136,
+        "y": 3118104,
+        "w": 246888,
+        "h": 0
+      },
+      "from_in": [
+        2.44,
+        3.41
+      ],
+      "to_in": [
+        2.71,
+        3.41
+      ],
+      "line": {
+        "color": "#5B6570",
+        "weight_pt": 1.5,
+        "end_arrow": "FILL_ARROW"
+      },
+      "z": 28
+    },
+    {
+      "id": "arrow_out",
+      "type": "arrow",
+      "geometry_in": {
+        "x": 7.29,
+        "y": 3.41,
+        "w": 0.2699999999999996,
+        "h": 0.0
+      },
+      "geometry_emu": {
+        "x": 6665976,
+        "y": 3118104,
+        "w": 246888,
+        "h": 0
+      },
+      "from_in": [
+        7.29,
+        3.41
+      ],
+      "to_in": [
+        7.56,
+        3.41
+      ],
+      "line": {
+        "color": "#5B6570",
+        "weight_pt": 1.5,
+        "end_arrow": "FILL_ARROW"
+      },
+      "z": 29
+    },
+    {
+      "id": "footer",
+      "type": "text",
+      "shape": "TEXT_BOX",
+      "geometry_in": {
+        "x": 0.4,
+        "y": 5.2,
+        "w": 9.2,
+        "h": 0.25
+      },
+      "geometry_emu": {
+        "x": 365760,
+        "y": 4754880,
+        "w": 8412480,
+        "h": 228600
+      },
+      "fill": null,
+      "line": {
+        "none": true
+      },
+      "text_anchor": "TOP",
+      "paragraphs": [
+        {
+          "align": "START",
+          "runs": [
+            {
+              "text": "Prototype on synthetic data · AWS · detail in appendix",
+              "size_pt": 9,
+              "bold": false,
+              "color": "#5B6570",
+              "font": "DM Sans"
+            }
+          ]
+        }
+      ],
+      "z": 30
+    }
+  ],
+  "speaker_notes": "Every morning a reviewer gets a ranked list of denials, each with a drafted letter, its evidence and a deadline. Nothing goes out without approval. That is an illustrative $2M to $4M a year, about 50 cents per appeal on the prototype. Show: three sources, one governed Databricks platform on AWS, a human gate before submission. For the architect: Lakeflow lands claims and notes in Unity Catalog, ai_query drafts each determination, and Lakebase serves the worklist.",
+  "word_count": {
+    "body_outcome_figures_and_captions": 19,
+    "labels_sources_incl_formats": 17,
+    "labels_stage_tiles": 22,
+    "labels_gate": 7,
+    "labels_column_heads": 6,
+    "headline": 12,
+    "footer": 10,
+    "all_slide_text": 93,
+    "speaker_notes": 76
+  },
+  "rules_check": {
+    "no_customer_name": true,
+    "no_person_names": true,
+    "rasterised_art": false,
+    "synthetic_label": true
+  }
+}

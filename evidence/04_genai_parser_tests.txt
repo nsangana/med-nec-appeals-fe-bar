@@ -1,0 +1,44 @@
+# note: local home paths redacted to ~ before commit
+# genai parser tests (genai/test_appeal_parser.py) - run 2026-11-24T09:23:34Z
+# python: Python 3.14.0
+============================= test session starts ==============================
+platform darwin -- Python 3.14.0, pytest-9.2.0, pluggy-1.7.0 -- ~/.venvs/febar-tests/bin/python
+cachedir: .pytest_cache
+rootdir: <repo>/genai
+collecting ... collected 14 items
+
+test_appeal_parser.py::test_good_warranted_has_letter_and_worksheet PASSED [  7%]
+test_appeal_parser.py::test_good_not_warranted_has_no_letter_even_if_model_wrote_one PASSED [ 14%]
+test_appeal_parser.py::test_good_needs_review_lists_missing_documentation_and_no_letter PASSED [ 21%]
+test_appeal_parser.py::test_malformed_no_delimiters_is_parse_failure_routed_to_needs_review PASSED [ 28%]
+test_appeal_parser.py::test_malformed_template_echo_is_not_accepted_as_a_determination PASSED [ 35%]
+test_appeal_parser.py::test_missing_worksheet_section_is_parse_failure PASSED [ 42%]
+test_appeal_parser.py::test_missing_letter_for_warranted_is_parse_failure_not_silent_warranted PASSED [ 50%]
+test_appeal_parser.py::test_missing_trailing_sections_still_parse_when_warranted_letter_is_last PASSED [ 57%]
+test_appeal_parser.py::test_lowercase_determination_is_normalised PASSED [ 64%]
+test_appeal_parser.py::test_lowercase_not_warranted_is_not_read_as_warranted PASSED [ 71%]
+test_appeal_parser.py::test_extra_text_before_first_delimiter_is_ignored PASSED [ 78%]
+test_appeal_parser.py::test_punctuation_and_markdown_bold_on_determination_line_are_tolerated PASSED [ 85%]
+test_appeal_parser.py::test_extra_explanation_on_determination_line_is_flagged_not_guessed PASSED [ 92%]
+test_appeal_parser.py::test_needs_review_with_blank_reason_gets_fallback_text PASSED [100%]
+
+============================== 14 passed in 0.02s ==============================
+
+# SQL parity check: pipeline/30_generate_appeals.sql parse chain executed on the warehouse against the same 13 sample responses (see genai/test_appeal_parser.py for the pytest cases)
+# run 2026-11-24T09:24:57Z via tools/run_sql.py; the SQL parse chain was extracted from the production file (/tmp/febar_parity/parity.sql, not in repo)
+| id | name | recommendation | needs_review_reason | cheat_sheet | appeal_letter |
+|---|---|---|---|---|---|
+| 0 | good_w | WARRANTED | NULL | AI REASONING WORKSHEET - Evidence mapping: [2026-03-14 PT_VISIT] 12 PT sessions documented failure. | RE: Patient [Member ID], DOS 2026-01-08.  Dear Medical Director, the documented course supports coverage. |
+| 1 | good_nw | NOT WARRANTED | NULL | AI REASONING WORKSHEET - Evidence mapping: [2026-03-14 PT_VISIT] 12 PT sessions documented failure. | NULL |
+| 2 | good_nr | NEEDS REVIEW | - No imaging report | AI REASONING WORKSHEET - Evidence mapping: [2026-03-14 PT_VISIT] 12 PT sessions documented failure. | NULL |
+| 3 | malformed | NEEDS REVIEW | PARSE_FAILURE: determination not one of WARRANTED / NOT WARRANTED / NEEDS REVIEW (model wrote: ""). Routed to NEEDS REVIEW by the pipeline; reviewer to check raw_response. | NULL | NULL |
+| 4 | echo | NEEDS REVIEW | PARSE_FAILURE: determination not one of WARRANTED / NOT WARRANTED / NEEDS REVIEW (model wrote: "WARRANTED or NOT WARRANTED"). Routed to NEEDS REVIEW by the pipeline; reviewer to check raw_response. | AI REASONING WORKSHEET - Evidence mapping: [2026-03-14 PT_VISIT] 12 PT sessions documented failure. | NULL |
+| 5 | no_cheat | NEEDS REVIEW | PARSE_FAILURE: AI reasoning worksheet section missing. Routed to NEEDS REVIEW by the pipeline; reviewer to check raw_response. | NULL | NULL |
+| 6 | w_no_letter | NEEDS REVIEW | PARSE_FAILURE: WARRANTED without an appeal letter. Routed to NEEDS REVIEW by the pipeline; reviewer to check raw_response. | AI REASONING WORKSHEET - Evidence mapping: [2026-03-14 PT_VISIT] 12 PT sessions documented failure. | NULL |
+| 7 | lower | WARRANTED | NULL | AI REASONING WORKSHEET - Evidence mapping: [2026-03-14 PT_VISIT] 12 PT sessions documented failure. | RE: Patient [Member ID], DOS 2026-01-08.  Dear Medical Director, the documented course supports coverage. |
+| 8 | preamble | WARRANTED | NULL | AI REASONING WORKSHEET - Evidence mapping: [2026-03-14 PT_VISIT] 12 PT sessions documented failure. | RE: Patient [Member ID], DOS 2026-01-08.  Dear Medical Director, the documented course supports coverage. |
+| 9 | bold | NOT WARRANTED | NULL | AI REASONING WORKSHEET - Evidence mapping: [2026-03-14 PT_VISIT] 12 PT sessions documented failure. | NULL |
+| 10 | extra | NEEDS REVIEW | PARSE_FAILURE: determination not one of WARRANTED / NOT WARRANTED / NEEDS REVIEW (model wrote: "WARRANTED - strong evidence"). Routed to NEEDS REVIEW by the pipeline; reviewer to check raw_response. | AI REASONING WORKSHEET - Evidence mapping: [2026-03-14 PT_VISIT] 12 PT sessions documented failure. | NULL |
+| 11 | blank_reason | NEEDS REVIEW | NEEDS REVIEW (model gave no reason) | AI REASONING WORKSHEET - Evidence mapping: [2026-03-14 PT_VISIT] 12 PT sessions documented failure. | NULL |
+| 12 | no_trailing | WARRANTED | NULL | AI REASONING WORKSHEET - Evidence mapping: [2026-03-14 PT_VISIT] 12 PT sessions documented failure. | RE: Patient [Member ID], DOS 2026-01-08.  Dear Medical Director, the documented course supports coverage. |
+

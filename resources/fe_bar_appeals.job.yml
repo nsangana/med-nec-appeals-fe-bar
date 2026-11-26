@@ -1,0 +1,154 @@
+# Lakeflow Job: end-to-end medical-necessity appeals run, defined as code.
+# Raw synthetic data -> SDP (bronze/silver/gold) -> grounding + deterministic data sheet -> ai_query generation
+# (<= 60 / run, incremental) -> PDFs -> Lakebase serving + review state back to UC -> evaluation.
+# Python tasks run on serverless jobs compute (no cluster spec). SQL tasks run on the shared SQL warehouse.
+resources:
+  jobs:
+    fe_bar_appeals_job:
+      name: fe-bar-appeals-job
+      description: >-
+        FE Bar: denied-claim worklist -> grounded appeal determination + letter (WARRANTED / NOT WARRANTED /
+        NEEDS REVIEW) + deterministic data sheet -> Lakebase worklist for human review. Synthetic data only.
+      max_concurrent_runs: 1
+      timeout_seconds: 7200
+      # Daily morning run ("denied yesterday" worklist). PAUSED: unpause only when a recurring demo is wanted (cost).
+      schedule:
+        quartz_cron_expression: "0 0 4 * * ?"
+        timezone_id: America/Phoenix
+        pause_status: PAUSED
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        - name: schema
+          default: ${var.schema}
+        - name: seed
+          default: "20261124"
+        - name: n_encounters
+          default: "500"
+        - name: as_of_date
+          default: ""   # empty = today
+        # genai_evaluate: rows per run (latest generations) and the judge-cost guard in USD (estimate printed first)
+        - name: genai_max_rows
+          default: "60"
+        - name: genai_cost_cap_usd
+          default: "5"
+      # Serverless environment for the MLflow GenAI evaluation task (notebook tasks reference it via environment_key)
+      environments:
+        - environment_key: genai_eval
+          spec:
+            client: "2"
+            dependencies:
+              - "mlflow[databricks]>=3.1"
+      tasks:
+        # One-time foundation (criteria parsing, VS index, descriptors, UC functions). Idempotent: skips the
+        # expensive ai_parse_document steps when the tables already have rows.
+        - task_key: bootstrap
+          notebook_task:
+            notebook_path: ../pipeline/00_bootstrap.py
+          max_retries: 1
+          min_retry_interval_millis: 60000
+
+        - task_key: generate_raw_data
+          notebook_task:
+            notebook_path: ../pipeline/10_generate_raw_data.py
+            base_parameters:
+              catalog: "{{job.parameters.catalog}}"
+              schema: "{{job.parameters.schema}}"
+              seed: "{{job.parameters.seed}}"
+              n_encounters: "{{job.parameters.n_encounters}}"
+              as_of_date: "{{job.parameters.as_of_date}}"
+          max_retries: 1
+          min_retry_interval_millis: 60000
+
+        - task_key: sdp_pipeline
+          depends_on:
+            - task_key: generate_raw_data
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.fe_bar_appeals_sdp.id}
+            full_refresh: false
+          max_retries: 1
+          min_retry_interval_millis: 120000
+
+        - task_key: grounding
+          depends_on:
+            - task_key: sdp_pipeline
+            - task_key: bootstrap
+          sql_task:
+            warehouse_id: ${var.warehouse_id}
+            file:
+              path: ../pipeline/20_encounter_grounding.sql
+          max_retries: 1
+          min_retry_interval_millis: 60000
+
+        - task_key: data_sheet_facts
+          depends_on:
+            - task_key: grounding
+          sql_task:
+            warehouse_id: ${var.warehouse_id}
+            file:
+              path: ../pipeline/25_data_sheet_facts.sql
+          max_retries: 1
+          min_retry_interval_millis: 60000
+
+        - task_key: generate_appeals
+          depends_on:
+            - task_key: grounding
+          sql_task:
+            warehouse_id: ${var.warehouse_id}
+            file:
+              path: ../pipeline/30_generate_appeals.sql
+          # One retry only: the MERGE is incremental (input_hash), so a retry does not re-bill finished rows.
+          max_retries: 1
+          min_retry_interval_millis: 120000
+          timeout_seconds: 3600
+
+        # Re-run the idempotent bootstrap so UC functions that depend on grounding/appeals_output exist on a clean state.
+        - task_key: register_tools
+          depends_on:
+            - task_key: generate_appeals
+          notebook_task:
+            notebook_path: ../pipeline/00_bootstrap.py
+          max_retries: 1
+          min_retry_interval_millis: 60000
+
+        - task_key: render_pdfs
+          depends_on:
+            - task_key: generate_appeals
+            - task_key: data_sheet_facts
+          notebook_task:
+            notebook_path: ../pipeline/40_render_pdfs.py
+          max_retries: 1
+          min_retry_interval_millis: 60000
+
+        - task_key: lakebase_sync
+          depends_on:
+            - task_key: render_pdfs
+          notebook_task:
+            notebook_path: ../pipeline/50_lakebase_sync.py
+          max_retries: 2
+          min_retry_interval_millis: 60000
+
+        - task_key: evaluate
+          depends_on:
+            - task_key: generate_appeals
+          notebook_task:
+            notebook_path: ../pipeline/60_evaluate.py
+          max_retries: 1
+          min_retry_interval_millis: 60000
+
+        # MLflow 3 GenAI evaluation (groundedness, no fabricated evidence, quote_verified, determination vs label).
+        # Replays stored generations (no LLM generation call); judge = Databricks-hosted Claude Sonnet 4.6.
+        - task_key: genai_evaluate
+          depends_on:
+            - task_key: evaluate
+          environment_key: genai_eval
+          notebook_task:
+            notebook_path: ../pipeline/65_genai_evaluate.py
+            base_parameters:
+              catalog: "{{job.parameters.catalog}}"
+              schema: "{{job.parameters.schema}}"
+              max_rows: "{{job.parameters.genai_max_rows}}"
+              cost_cap_usd: "{{job.parameters.genai_cost_cap_usd}}"
+          max_retries: 1
+          min_retry_interval_millis: 60000
+          timeout_seconds: 3600

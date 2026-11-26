@@ -1,0 +1,14 @@
+# Lakeflow Spark Declarative Pipeline (serverless). Source: sdp/ (SQL).
+# Bronze = Auto Loader over the generator's landing volume; silver = expectations; gold = worklist + MVs.
+resources:
+  pipelines:
+    fe_bar_appeals_sdp:
+      name: fe-bar-appeals-sdp
+      catalog: ${var.catalog}
+      schema: ${var.schema}
+      serverless: true
+      channel: CURRENT
+      continuous: false
+      libraries:
+        - glob:
+            include: ../sdp/**

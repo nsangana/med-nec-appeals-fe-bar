@@ -1,0 +1,26 @@
+# FE Bar medical-necessity appeals (Databricks Asset Bundle).
+# Owner of the SDP pipeline resource: resources/fe_bar_appeals.pipeline.yml (Agent A).
+# The orchestrator adds resources/fe_bar_appeals.job.yml. Deploy: databricks bundle deploy --profile fevm-appeals-hackathon
+bundle:
+  name: med-nec-appeals-fe-bar
+
+include:
+  - resources/*.yml
+
+variables:
+  catalog:
+    description: Unity Catalog catalog for all FE Bar objects
+    default: appeals_hackathon_catalog
+  schema:
+    description: Schema for FE Bar objects (landing, bronze/silver/gold, labels)
+    default: fe_bar_appeals
+  warehouse_id:
+    description: SQL warehouse used by SQL tasks (bootstrap/grounding/evaluate)
+    default: 559faf81d610a2a1
+
+targets:
+  # No `mode: development` on purpose: resource names stay exact (fe-bar-appeals-*).
+  default:
+    default: true
+    workspace:
+      host: https://fevm-appeals-hackathon.cloud.databricks.com

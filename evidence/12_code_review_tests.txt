@@ -1,0 +1,119 @@
+# note: local home paths redacted to ~ before commit
+# Code review: test and validation output (2026-11-25T21:56:25Z)
+
+## 1. pytest generator/ + genai/
+============================= test session starts ==============================
+platform darwin -- Python 3.14.0, pytest-9.2.0, pluggy-1.7.0 -- /private/tmp/febar-venv/bin/python
+cachedir: .pytest_cache
+rootdir: <repo>
+collecting ... collected 51 items
+
+generator/tests/test_generator.py::test_same_seed_identical_output PASSED [  1%]
+generator/tests/test_generator.py::test_different_seed_changes_output PASSED [  3%]
+generator/tests/test_generator.py::test_default_seed_is_spec_seed PASSED [  5%]
+generator/tests/test_generator.py::test_claim_schema_complete PASSED     [  7%]
+generator/tests/test_generator.py::test_claim_new_fields_present_and_typed PASSED [  9%]
+generator/tests/test_generator.py::test_note_schema_complete PASSED      [ 11%]
+generator/tests/test_generator.py::test_label_schema_complete PASSED     [ 13%]
+generator/tests/test_generator.py::test_encounter_count_and_keys_unique PASSED [ 15%]
+generator/tests/test_generator.py::test_line_numbers_unique PASSED       [ 17%]
+generator/tests/test_generator.py::test_note_event_ids_unique_per_encounter PASSED [ 19%]
+generator/tests/test_generator.py::test_every_encounter_has_notes PASSED [ 21%]
+generator/tests/test_generator.py::test_label_mix_within_tolerance PASSED [ 23%]
+generator/tests/test_generator.py::test_deadline_mix_within_tolerance PASSED [ 25%]
+generator/tests/test_generator.py::test_deadline_days_consistent_with_denial PASSED [ 27%]
+generator/tests/test_generator.py::test_carc_mix_covers_all_five PASSED  [ 29%]
+generator/tests/test_generator.py::test_payer_mix_has_all_payer_types PASSED [ 31%]
+generator/tests/test_generator.py::test_procedures_fit_carc PASSED       [ 33%]
+generator/tests/test_generator.py::test_expected_reimbursement_well_below_charges PASSED [ 35%]
+generator/tests/test_generator.py::test_non_hero_expected_below_hero_cap PASSED [ 37%]
+generator/tests/test_generator.py::test_hero_claim_exact PASSED          [ 39%]
+generator/tests/test_generator.py::test_hero_label_and_scenario PASSED   [ 41%]
+generator/tests/test_generator.py::test_hero_notes_document_the_chain PASSED [ 43%]
+generator/tests/test_generator.py::test_dos_before_denial_for_valid_lines PASSED [ 45%]
+generator/tests/test_generator.py::test_defects_are_the_only_dos_violations PASSED [ 47%]
+generator/tests/test_generator.py::test_note_dates_not_after_dos PASSED  [ 49%]
+generator/tests/test_generator.py::test_defect_injection_about_two_percent_and_all_kinds PASSED [ 50%]
+generator/tests/test_generator.py::test_defects_never_hit_hero PASSED    [ 52%]
+generator/tests/test_generator.py::test_notes_never_mention_label PASSED [ 54%]
+generator/tests/test_generator.py::test_every_label_has_note_variety PASSED [ 56%]
+generator/tests/test_generator.py::test_small_batch_works PASSED         [ 58%]
+generator/tests/test_generator.py::test_denied_yesterday_encounters PASSED [ 60%]
+generator/tests/test_generator.py::test_denied_yesterday_labels_still_mixed PASSED [ 62%]
+generator/tests/test_generator.py::test_tka_modifier_matches_side_documented_in_notes PASSED [ 64%]
+generator/tests/test_generator.py::test_tka_warranted_ortho_note_cites_modifier PASSED [ 66%]
+generator/tests/test_generator.py::test_hero_tka_note_is_right_knee_rt PASSED [ 68%]
+generator/tests/test_generator.py::test_scs_warranted_template_elements_direct PASSED [ 70%]
+generator/tests/test_generator.py::test_scs_warranted_batch_chart_has_dated_mri_and_pma_device PASSED [ 72%]
+genai/test_appeal_parser.py::test_good_warranted_has_letter_and_worksheet PASSED [ 74%]
+genai/test_appeal_parser.py::test_good_not_warranted_has_no_letter_even_if_model_wrote_one PASSED [ 76%]
+genai/test_appeal_parser.py::test_good_needs_review_lists_missing_documentation_and_no_letter PASSED [ 78%]
+genai/test_appeal_parser.py::test_malformed_no_delimiters_is_parse_failure_routed_to_needs_review PASSED [ 80%]
+genai/test_appeal_parser.py::test_malformed_template_echo_is_not_accepted_as_a_determination PASSED [ 82%]
+genai/test_appeal_parser.py::test_missing_worksheet_section_is_parse_failure PASSED [ 84%]
+genai/test_appeal_parser.py::test_missing_letter_for_warranted_is_parse_failure_not_silent_warranted PASSED [ 86%]
+genai/test_appeal_parser.py::test_missing_trailing_sections_still_parse_when_warranted_letter_is_last PASSED [ 88%]
+genai/test_appeal_parser.py::test_lowercase_determination_is_normalised PASSED [ 90%]
+genai/test_appeal_parser.py::test_lowercase_not_warranted_is_not_read_as_warranted PASSED [ 92%]
+genai/test_appeal_parser.py::test_extra_text_before_first_delimiter_is_ignored PASSED [ 94%]
+genai/test_appeal_parser.py::test_punctuation_and_markdown_bold_on_determination_line_are_tolerated PASSED [ 96%]
+genai/test_appeal_parser.py::test_extra_explanation_on_determination_line_is_flagged_not_guessed PASSED [ 98%]
+genai/test_appeal_parser.py::test_needs_review_with_blank_reason_gets_fallback_text PASSED [100%]
+
+============================== 51 passed in 0.17s ==============================
+
+## 2. py_compile of changed Python files
+py_compile OK
+
+## 3. md_html escaping check
+<p>Summary <strong>bold</strong></p>
+<p>&lt;img src=&quot;file:///etc/passwd&quot;&gt; &lt;link rel=&quot;stylesheet&quot; href=&quot;http://x.example/a.css&quot;&gt;</p>
+<table>
+<thead>
+<tr>
+<th>a</th>
+<th>b</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>2</td>
+</tr>
+</tbody>
+</table>
+CHECK OK: raw HTML escaped; markdown bold and tables still render
+
+## 4. app: npm run typecheck && npm run lint && npm test (in app/)
+typecheck: exit 0
+lint: exit 0
+ Test Files  2 passed (2)
+      Tests  24 passed (24)
+
+## 5. Warehouse validation, SCRATCH objects only (schema appeals_hackathon_catalog.fe_bar_cr_scratch)
+Production tables were read, never written, in this section. Scratch = 25 encounters (priority_rank <= 25, incl. hero)
+copied from production gold/notes/claims/MPFS/criteria. The new 20_encounter_grounding.sql ran with its schema
+name rewritten to the scratch schema (sed, /tmp only). Each run = the full file via tools/run_sql.py -f.
+
+5a. Cold cache (first run, cache empty): 25 ai_summarize calls. encounter_digest_cache = 25 rows, 0 NULL digests.
+5b. Warm re-run, nothing changed: encounter_digest_pending = 0 rows at run start; cache still 25 rows; max(digested_at)
+    unchanged from the cold pass (no new summaries, so no LLM calls). grounding = 25 rows, 0 NULL digests.
+5c. input_hash vs production encounter_grounding for the same 25 keys: 25 equal, 0 differ.
+5d. One note edited in scratch medical_records (encounter at priority_rank 2), then full re-run:
+    pending = 1 (only that encounter); cache = 25 rows (new digest at the edit-run timestamp; superseded row pruned);
+    input_hash changed for 1 key, unchanged for 24, 0 NULL digests.
+
+5e. Label-join fix (60_evaluate.py). Production eval_case_labels: 500 rows, 500 keys, 1 batch.
+    New join against production appeals_output: 180 rows (= appeals). Scratch copy with a second label batch
+    (as_of + 1 day): old plain join = 360 rows (every case double-counted); new QUALIFY-latest join = 180 rows.
+
+5f. Scratch cleanup: DROP SCHEMA fe_bar_cr_scratch CASCADE run after this capture; SHOW SCHEMAS confirms it is gone.
+
+
+## 6. Re-run after the SQL-quote regression test was added (2026-11-26)
+
+```
+.....................................................                    [100%]
+53 passed in 0.19s
+```
+New guard: `genai/test_sql_quotes.py` fails on unbalanced single quotes in any pipeline/sdp/genie/governance SQL file (regression for the apostrophe bug in the anonymized generation prompt; verified to fail when the bug is reintroduced).

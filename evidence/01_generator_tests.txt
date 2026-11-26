@@ -1,0 +1,46 @@
+# note: local home paths redacted to ~ before commit
+# Generator test run (local, stdlib generator + pytest)
+# Command: /tmp/febar_venv/bin/python -m pytest generator/tests -v
+# Python: Python 3.12.12 | pytest 9.2.0
+# Date: 2026-11-24
+
+============================= test session starts ==============================
+platform darwin -- Python 3.12.12, pytest-9.2.0, pluggy-1.7.0 -- /tmp/febar_venv/bin/python
+cachedir: .pytest_cache
+rootdir: <repo>
+collecting ... collected 32 items
+
+generator/tests/test_generator.py::test_same_seed_identical_output PASSED [  3%]
+generator/tests/test_generator.py::test_different_seed_changes_output PASSED [  6%]
+generator/tests/test_generator.py::test_default_seed_is_spec_seed PASSED [  9%]
+generator/tests/test_generator.py::test_claim_schema_complete PASSED     [ 12%]
+generator/tests/test_generator.py::test_claim_new_fields_present_and_typed PASSED [ 15%]
+generator/tests/test_generator.py::test_note_schema_complete PASSED      [ 18%]
+generator/tests/test_generator.py::test_label_schema_complete PASSED     [ 21%]
+generator/tests/test_generator.py::test_encounter_count_and_keys_unique PASSED [ 25%]
+generator/tests/test_generator.py::test_line_numbers_unique PASSED       [ 28%]
+generator/tests/test_generator.py::test_note_event_ids_unique_per_encounter PASSED [ 31%]
+generator/tests/test_generator.py::test_every_encounter_has_notes PASSED [ 34%]
+generator/tests/test_generator.py::test_label_mix_within_tolerance PASSED [ 37%]
+generator/tests/test_generator.py::test_deadline_mix_within_tolerance PASSED [ 40%]
+generator/tests/test_generator.py::test_deadline_days_consistent_with_denial PASSED [ 43%]
+generator/tests/test_generator.py::test_carc_mix_covers_all_five PASSED  [ 46%]
+generator/tests/test_generator.py::test_payer_mix_has_all_payer_types PASSED [ 50%]
+generator/tests/test_generator.py::test_procedures_fit_carc PASSED       [ 53%]
+generator/tests/test_generator.py::test_expected_reimbursement_well_below_charges PASSED [ 56%]
+generator/tests/test_generator.py::test_non_hero_expected_below_hero_cap PASSED [ 59%]
+generator/tests/test_generator.py::test_hero_claim_exact PASSED          [ 62%]
+generator/tests/test_generator.py::test_hero_label_and_scenario PASSED   [ 65%]
+generator/tests/test_generator.py::test_hero_notes_document_the_chain PASSED [ 68%]
+generator/tests/test_generator.py::test_dos_before_denial_for_valid_lines PASSED [ 71%]
+generator/tests/test_generator.py::test_defects_are_the_only_dos_violations PASSED [ 75%]
+generator/tests/test_generator.py::test_note_dates_not_after_dos PASSED  [ 78%]
+generator/tests/test_generator.py::test_defect_injection_about_two_percent_and_all_kinds PASSED [ 81%]
+generator/tests/test_generator.py::test_defects_never_hit_hero PASSED    [ 84%]
+generator/tests/test_generator.py::test_notes_never_mention_label PASSED [ 87%]
+generator/tests/test_generator.py::test_every_label_has_note_variety PASSED [ 90%]
+generator/tests/test_generator.py::test_small_batch_works PASSED         [ 93%]
+generator/tests/test_generator.py::test_denied_yesterday_encounters PASSED [ 96%]
+generator/tests/test_generator.py::test_denied_yesterday_labels_still_mixed PASSED [100%]
+
+============================== 32 passed in 0.11s ==============================
