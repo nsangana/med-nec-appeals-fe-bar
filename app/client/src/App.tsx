@@ -17,11 +17,10 @@ import { ContentDialog, type ContentTarget } from './components/ContentDialog';
 import { fetchConfig, fetchSummary, type WorklistSummary } from './lib/api';
 import { formatCurrency } from './lib/formatters';
 
-function KpiStrip({ refreshKey }: { refreshKey: number }) {
-  // Keyed by refreshKey so "loading" means the stats are from an older refresh.
+// One summary request per refresh, shared by the KPI strip and the worklist filter chips.
+// Keyed by refreshKey so "loading" means the stats are from an older refresh.
+function useWorklistSummary(refreshKey: number) {
   const [result, setResult] = useState<{ key: number; stats: WorklistSummary | null } | null>(null);
-  const loading = result?.key !== refreshKey;
-  const stats = !loading && result ? result.stats : null;
 
   useEffect(() => {
     fetchSummary()
@@ -29,6 +28,11 @@ function KpiStrip({ refreshKey }: { refreshKey: number }) {
       .catch(() => setResult({ key: refreshKey, stats: null }));
   }, [refreshKey]);
 
+  const loading = result?.key !== refreshKey;
+  return { stats: !loading && result ? result.stats : null, loading };
+}
+
+function KpiStrip({ stats, loading }: { stats: WorklistSummary | null; loading: boolean }) {
   const cards = [
     {
       label: 'Denials in worklist',
@@ -82,12 +86,26 @@ function KpiStrip({ refreshKey }: { refreshKey: number }) {
   );
 }
 
+// True on lg+ screens (Tailwind lg = 1024px). Drives the single-instance sidebar vs inline assistant.
+function useIsWide(query = '(min-width: 1024px)'): boolean {
+  const [wide, setWide] = useState(() => (typeof window !== 'undefined' ? window.matchMedia(query).matches : true));
+  useEffect(() => {
+    const mq = window.matchMedia(query);
+    const onChange = () => setWide(mq.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, [query]);
+  return wide;
+}
+
 export default function App() {
   const [context, setContext] = useState<AppealContext | null>(null);
   const [contentTarget, setContentTarget] = useState<ContentTarget | null>(null);
   const [caseTarget, setCaseTarget] = useState<CaseTarget | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [genieEnabled, setGenieEnabled] = useState(false);
+  const isWide = useIsWide();
+  const summary = useWorklistSummary(refreshKey);
 
   useEffect(() => {
     fetchConfig()
@@ -101,38 +119,8 @@ export default function App() {
     ? `${context.facility_id}|${context.account}|${context.encounter_nbr}`
     : null;
 
-  return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b px-4 py-4 md:px-6">
-        <h1 className="text-xl font-semibold text-foreground">
-          Medical-Necessity Appeals
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Review AI-drafted appeals with their data sheets, record decisions, and ask the appeals agent.
-          Worklist source: Lakebase <code className="text-xs">fe_bar_appeals.worklist_serving</code>
-        </p>
-      </header>
-
-      <main className="mx-auto max-w-[1400px] space-y-4 px-4 py-6 md:px-6">
-        <KpiStrip refreshKey={refreshKey} />
-
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
-          <Card>
-            <CardContent className="p-4">
-              <Worklist
-                onSelect={setContext}
-                onOpenContent={setContentTarget}
-                onOpenCase={setCaseTarget}
-                selectedKey={selectedKey}
-                refreshKey={refreshKey}
-              />
-            </CardContent>
-          </Card>
-
-          {/* Sticky, viewport-height column (1440x900: top 24px + 852px height ends above the fold).
-              Message lists scroll inside; the composer stays pinned at the bottom of the panel. */}
-          <div className="h-[560px] lg:sticky lg:top-6 lg:h-[calc(100vh-3rem)]">
-            {genieEnabled ? (
+  // One assistant instance only (no duplicate chat/Genie sessions): sidebar on lg+, inline below lg.
+  const assistant = genieEnabled ? (
               <Tabs defaultValue="agent" className="flex h-full min-h-0 flex-col">
                 <TabsList className="shrink-0">
                   <TabsTrigger value="agent">Appeals agent</TabsTrigger>
@@ -148,10 +136,50 @@ export default function App() {
               </Tabs>
             ) : (
               <ChatPane context={context} onClearContext={() => setContext(null)} />
-            )}
-          </div>
-        </div>
-      </main>
+            );
+
+
+  return (
+    <div className="flex min-h-screen bg-background">
+      {/* Left: header, KPIs and worklist scroll with the page. */}
+      <div className="min-w-0 flex-1">
+        <header className="border-b px-4 py-4 md:px-6">
+          <h1 className="text-xl font-semibold text-foreground">
+            Medical-Necessity Appeals
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Review AI-drafted appeals with their data sheets, record decisions, and ask the appeals agent.
+            Worklist source: Lakebase <code className="text-xs">fe_bar_appeals.worklist_serving</code>
+          </p>
+        </header>
+
+        <main className="mx-auto max-w-[1400px] space-y-4 px-4 py-6 md:px-6">
+          <KpiStrip stats={summary.stats} loading={summary.loading} />
+          <Card>
+            <CardContent className="p-4">
+              <Worklist
+                onSelect={setContext}
+                onOpenContent={setContentTarget}
+                onOpenCase={setCaseTarget}
+                selectedKey={selectedKey}
+                refreshKey={refreshKey}
+                counts={summary.stats}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Below lg the assistant sits under the worklist at a fixed height. */}
+          {!isWide && <div className="h-[600px]">{assistant}</div>}
+        </main>
+      </div>
+
+      {/* Right: copilot-style sidebar pinned to the viewport from the top. The message list scrolls
+          inside it and the question box is always at the bottom of the screen; no page scrolling. */}
+      {isWide && (
+        <aside className="sticky top-0 flex h-screen w-[420px] shrink-0 flex-col border-l bg-background p-3">
+          {assistant}
+        </aside>
+      )}
 
       {contentTarget && (
         <ContentDialog target={contentTarget} onClose={() => setContentTarget(null)} />

@@ -1,5 +1,6 @@
 // Typed client for the app's own API routes (server/server.ts). Worklist and review data come from
 // Lakebase through these routes; the UI never queries Lakebase directly.
+import { buildWorklistQuery, type WorklistQueryParams } from './worklistQuery';
 
 export interface WorklistItem {
   facility_id: string;
@@ -42,6 +43,7 @@ export interface WorklistSummary {
   warranted: number;
   not_warranted: number;
   needs_review: number;
+  not_generated: number;
   warranted_expected: number;
 }
 
@@ -106,14 +108,8 @@ async function getJson<T>(url: string): Promise<T> {
   return (await res.json()) as T;
 }
 
-export function fetchWorklist(params: { search: string; sort: string; page: number; page_size: number }, signal?: AbortSignal) {
-  const qs = new URLSearchParams({
-    search: params.search,
-    sort: params.sort,
-    page: String(params.page),
-    page_size: String(params.page_size),
-  });
-  return fetch(`/api/worklist?${qs.toString()}`, { signal, headers: { Accept: 'application/json' } }).then(async (res) => {
+export function fetchWorklist(params: WorklistQueryParams, signal?: AbortSignal) {
+  return fetch(`/api/worklist?${buildWorklistQuery(params)}`, { signal, headers: { Accept: 'application/json' } }).then(async (res) => {
     if (!res.ok) {
       const body = (await res.json().catch(() => null)) as { error?: string; code?: string | null } | null;
       throw new ApiError(body?.code ? `${body.error ?? 'Request failed'} (${body.code})` : (body?.error ?? `Request failed (${res.status})`), res.status);

@@ -144,3 +144,10 @@ Not wired. Set `DATABRICKS_GENIE_SPACE_ID` and add the `genie-space` resource to
 - Diffs above ~6M table cells show the middle as one replacement, so the word count is coarse for very large rewrites.
 - The Approve/Submit actions do not record the version they applied to. That would need a schema change, which was out of scope.
 - Print file name depends on the browser using the document title for its default PDF name (Chrome and Safari do).
+
+
+## Worklist filters + sidebar layout (2026-11-26)
+- Assistant/Genie panel is a full-height sidebar pinned to the viewport (question box always visible); single instance below lg.
+- Recommendation filter chips with counts, ">= $10K expected" toggle, "Expected $ (high -> low)" sort; server-side bound params (recommendation, min_expected) so filters span all 500 rows.
+- Verified against Lakebase Postgres with the real SQL: total 500 = WARRANTED 72 + NOT WARRANTED 66 + NEEDS REVIEW 42 + NOT GENERATED 320; >= $10K = 107 (WARRANTED 42); expected_desc puts the hero claim ($24,850) first.
+- 73 tests pass; deployments 01f1e962… (layout) and 01f1e963… (filters) SUCCEEDED.

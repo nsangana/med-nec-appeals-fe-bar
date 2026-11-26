@@ -4,6 +4,7 @@ import {
   Badge,
   Button,
   Empty,
+  EmptyContent,
   EmptyDescription,
   EmptyHeader,
   EmptyMedia,
@@ -24,9 +25,17 @@ import {
 } from '@databricks/appkit-ui/react';
 import { ChevronLeft, ChevronRight, FileText, FolderOpen, Inbox, Search, ScrollText } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { fetchWorklist, type WorklistItem } from '../lib/api';
+import { fetchWorklist, type WorklistItem, type WorklistSummary } from '../lib/api';
 import { formatCurrency, formatDate } from '../lib/formatters';
 import { summarizeReason } from '../lib/reason';
+import {
+  countForFilter,
+  formatChipLabel,
+  hasActiveFilters,
+  minExpectedFor,
+  RECOMMENDATION_FILTERS,
+  type RecommendationFilter,
+} from '../lib/worklistQuery';
 import { RecommendationBadge } from './RecommendationBadge';
 import type { AppealContext } from './ChatPane';
 import type { ContentTarget } from './ContentDialog';
@@ -35,7 +44,7 @@ import type { CaseTarget } from './CaseFileDialog';
 const PAGE_SIZE = 10;
 const SKELETON_KEYS = Array.from({ length: PAGE_SIZE }, (_, i) => `skeleton-${i}`);
 
-type SortKey = 'priority' | 'dos_desc' | 'dos_asc' | 'account_desc' | 'account_asc';
+type SortKey = 'priority' | 'dos_desc' | 'dos_asc' | 'account_desc' | 'account_asc' | 'expected_desc';
 
 const REVIEW_LABEL: Record<string, string> = {
   EDIT: 'Edited',
@@ -72,19 +81,26 @@ export function Worklist({
   onOpenCase,
   selectedKey,
   refreshKey,
+  counts,
 }: {
   onSelect: (ctx: AppealContext) => void;
   onOpenContent: (target: ContentTarget) => void;
   onOpenCase: (target: CaseTarget) => void;
   selectedKey: string | null;
   refreshKey: number;
+  /** Summary from the parent (shared with the KPI strip); null while loading or unavailable. */
+  counts: WorklistSummary | null;
 }) {
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('priority');
+  const [recommendation, setRecommendation] = useState<RecommendationFilter>('ALL');
+  const [highValueOnly, setHighValueOnly] = useState(false);
   const [page, setPage] = useState(0);
+  const minExpected = minExpectedFor(highValueOnly);
+  const filtered = hasActiveFilters({ search, recommendation, highValueOnly });
   // The fetched page is keyed by its request, so "loading" is simply "the result is for an older request".
-  const requestKey = `${search}|${sortKey}|${page}|${refreshKey}`;
+  const requestKey = `${search}|${sortKey}|${recommendation}|${minExpected}|${page}|${refreshKey}`;
   const [result, setResult] = useState<{ key: string; items: WorklistItem[]; total: number; error: string | null } | null>(null);
   const loading = result?.key !== requestKey;
   const items = !loading && result ? result.items : [];
@@ -100,7 +116,10 @@ export function Worklist({
   // Fetch the page from the app's Lakebase-backed route. Re-runs on filter change and after review actions.
   useEffect(() => {
     const controller = new AbortController();
-    fetchWorklist({ search, sort: sortKey, page, page_size: PAGE_SIZE }, controller.signal)
+    fetchWorklist(
+      { search, sort: sortKey, page, page_size: PAGE_SIZE, recommendation, min_expected: minExpected },
+      controller.signal,
+    )
       .then((data) => {
         setResult({ key: requestKey, items: data.items, total: data.total, error: null });
       })
@@ -121,6 +140,23 @@ export function Worklist({
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const rangeStart = total === 0 ? 0 : page * PAGE_SIZE + 1;
   const rangeEnd = page * PAGE_SIZE + items.length;
+
+  // Every filter change goes back to the first page so the user never lands on an empty page.
+  const selectRecommendation = (value: RecommendationFilter) => {
+    setRecommendation(value);
+    setPage(0);
+  };
+  const toggleHighValue = () => {
+    setHighValueOnly((v) => !v);
+    setPage(0);
+  };
+  const clearFilters = () => {
+    setSearchInput('');
+    setSearch('');
+    setRecommendation('ALL');
+    setHighValueOnly(false);
+    setPage(0);
+  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -156,9 +192,40 @@ export function Worklist({
               <SelectItem value="dos_asc">Date of service (oldest)</SelectItem>
               <SelectItem value="account_desc">Account (high → low)</SelectItem>
               <SelectItem value="account_asc">Account (low → high)</SelectItem>
+              <SelectItem value="expected_desc">Expected $ (high → low)</SelectItem>
             </SelectContent>
           </Select>
         </div>
+      </div>
+
+      {/* Filter chips: one row, wraps on narrow widths. aria-pressed marks the active chip for screen readers. */}
+      <div role="group" aria-label="Filter appeals" className="flex flex-wrap items-center gap-2">
+        {RECOMMENDATION_FILTERS.map((f) => {
+          const active = recommendation === f.value;
+          return (
+            <Button
+              key={f.value}
+              type="button"
+              size="sm"
+              variant={active ? 'default' : 'outline'}
+              aria-pressed={active}
+              className="rounded-full"
+              onClick={() => selectRecommendation(f.value)}
+            >
+              {formatChipLabel(f.label, countForFilter(counts, f.value))}
+            </Button>
+          );
+        })}
+        <Button
+          type="button"
+          size="sm"
+          variant={highValueOnly ? 'default' : 'outline'}
+          aria-pressed={highValueOnly}
+          className="rounded-full"
+          onClick={toggleHighValue}
+        >
+          ≥ $10K expected
+        </Button>
       </div>
 
       {error && (
@@ -322,13 +389,20 @@ export function Worklist({
                       <EmptyMedia variant="icon">
                         <Inbox className="h-6 w-6" />
                       </EmptyMedia>
-                      <EmptyTitle>No appeals found</EmptyTitle>
+                      <EmptyTitle>{filtered ? 'No appeals match these filters' : 'No appeals found'}</EmptyTitle>
                       <EmptyDescription>
-                        {search
-                          ? 'Try a different account, patient name, or denial code.'
+                        {filtered
+                          ? 'Try a different filter, search term, or expected-$ threshold.'
                           : 'There are no appeals to review.'}
                       </EmptyDescription>
                     </EmptyHeader>
+                    {filtered && (
+                      <EmptyContent>
+                        <Button variant="outline" size="sm" onClick={clearFilters}>
+                          Clear filters
+                        </Button>
+                      </EmptyContent>
+                    )}
                   </Empty>
                 </TableCell>
               </TableRow>

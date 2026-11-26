@@ -30,6 +30,7 @@ Customer = a fictional, anonymized large multi-state nonprofit health system. Pe
 | 19 | (Orchestrator caught, builder accepted) judge context must mirror the generation prompt | First judge run showed 83.3% groundedness | Judge sees what the model saw → 98.3%; drift test added |
 | 20 | Wanted the evidence to show how the AI was steered (this file) | — | `docs/STEERING_LOG.md`, referenced from README §6 |
 | 21 | Questioned the value of letter edits that don't update the PDF, and the chat/Genie panel needing a scroll to type; weighed effort vs demo impact and chose the no-new-permission option | Edited letter shown as a formatted preview with version chip, word-level "show changes" vs the AI draft, browser-generated final-letter PDF, "Approve version N"; sticky viewport-height chat/Genie panel with pinned input. Server-written PDFs deferred to the pilot (would need a volume write grant) |
+| 22 | Reported the assistant/Genie panel still needed scrolling after the first fix; asked for recommendation and expected-$ filters; asked for parallel agents | Root cause found (panel started below the fold); rebuilt as a full-height sidebar. Filters built by two parallel agents (server query / client chips) against a shared contract; verified on Lakebase |
 
 ## B. Business case
 

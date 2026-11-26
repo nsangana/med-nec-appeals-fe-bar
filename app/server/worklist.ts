@@ -21,7 +21,7 @@ export function reviewActionAllowed(action: ReviewAction, recommendation: string
   return recommendation === 'WARRANTED';
 }
 
-export const WORKLIST_SORTS = ['priority', 'dos_desc', 'dos_asc', 'account_asc', 'account_desc'] as const;
+export const WORKLIST_SORTS = ['priority', 'dos_desc', 'dos_asc', 'account_asc', 'account_desc', 'expected_desc'] as const;
 export type WorklistSort = (typeof WORKLIST_SORTS)[number];
 
 const WORKLIST_ORDER_BY: Record<WorklistSort, string> = {
@@ -31,7 +31,13 @@ const WORKLIST_ORDER_BY: Record<WorklistSort, string> = {
   dos_asc: `w.dos ASC NULLS LAST, w.priority_rank ASC`,
   account_asc: `w."PATIENT_CONTROL_NUMBER" ASC, w."ENCOUNTER_NBR" ASC`,
   account_desc: `w."PATIENT_CONTROL_NUMBER" DESC, w."ENCOUNTER_NBR" DESC`,
+  // Highest expected reimbursement first; NULL expected sorts last.
+  expected_desc: `w.expected_reimbursement DESC NULLS LAST, w.priority_rank ASC`,
 };
+
+/** Recommendation filter codes (API) and the DB value each one matches. NOT_GENERATED = no appeals_output row. */
+export const RECOMMENDATION_FILTERS = ['ALL', 'WARRANTED', 'NOT_WARRANTED', 'NEEDS_REVIEW', 'NOT_GENERATED'] as const;
+export type RecommendationFilter = (typeof RECOMMENDATION_FILTERS)[number];
 
 export const CaseKeySchema = z.object({
   facility_id: z.string().regex(/^\d{1,20}$/),
@@ -45,6 +51,9 @@ export const WorklistQuerySchema = z.object({
   sort: z.enum(WORKLIST_SORTS).default('priority'),
   page: z.coerce.number().int().min(0).max(100_000).default(0),
   page_size: z.coerce.number().int().min(1).max(100).default(10),
+  recommendation: z.enum(RECOMMENDATION_FILTERS).default('ALL'),
+  /** Minimum expected reimbursement in dollars. 0 = no filter. */
+  min_expected: z.coerce.number().min(0).max(1_000_000_000).default(0),
 });
 
 export const ReviewActionBodySchema = CaseKeySchema.extend({
@@ -101,13 +110,30 @@ LEFT JOIN public.review_state r
  AND r.patient_control_number = w."PATIENT_CONTROL_NUMBER"
  AND r.encounter_nbr = w."ENCOUNTER_NBR"`;
 
-/** Worklist page. $1 = search pattern, $2 = page size, $3 = offset. ORDER BY is a fixed map entry (see above). */
-export function buildWorklistQuery(sort: WorklistSort): string {
-  return `${WORKLIST_SELECT}
+/** Shared filter for the worklist page and its total count.
+ *  $1 = search pattern, $2 = recommendation filter code (RECOMMENDATION_FILTERS), $3 = min expected (number).
+ *  Every value is bound; the literals below are fixed SQL, not user text. NULL expected counts as 0. */
+export const WORKLIST_WHERE = `
 WHERE ($1 = '%%' OR w.patient_name ILIKE $1 OR w.denial_code ILIKE $1 OR w."PATIENT_CONTROL_NUMBER"::text ILIKE $1)
+  AND ($2::text = 'ALL'
+    OR ($2::text = 'WARRANTED' AND w.recommendation = 'WARRANTED')
+    OR ($2::text = 'NOT_WARRANTED' AND w.recommendation = 'NOT WARRANTED')
+    OR ($2::text = 'NEEDS_REVIEW' AND w.recommendation = 'NEEDS REVIEW')
+    OR ($2::text = 'NOT_GENERATED' AND w.recommendation IS NULL))
+  AND COALESCE(w.expected_reimbursement, 0) >= $3::float8`;
+
+/** Worklist page. $1 = search, $2 = recommendation filter, $3 = min expected, $4 = page size, $5 = offset.
+ *  ORDER BY is a fixed map entry (see above). total_count is a window over the filtered set. */
+export function buildWorklistQuery(sort: WorklistSort): string {
+  return `${WORKLIST_SELECT}${WORKLIST_WHERE}
 ORDER BY ${WORKLIST_ORDER_BY[sort]}
-LIMIT $2 OFFSET $3`;
+LIMIT $4 OFFSET $5`;
 }
+
+/** Filtered total for the same $1..$3 as the page query. Used when a page is past the end of the result set. */
+export const WORKLIST_COUNT_SQL = `
+SELECT COUNT(*)::int AS total
+FROM fe_bar_appeals.worklist_serving w${WORKLIST_WHERE}`;
 
 /** Single case. $1 = FACILITY_ID, $2 = PATIENT_CONTROL_NUMBER, $3 = ENCOUNTER_NBR (bigint params, sent as text). */
 export const CASE_SQL = `${WORKLIST_SELECT}
@@ -122,6 +148,7 @@ SELECT
   COUNT(*) FILTER (WHERE recommendation = 'WARRANTED')::int                AS warranted,
   COUNT(*) FILTER (WHERE recommendation = 'NOT WARRANTED')::int            AS not_warranted,
   COUNT(*) FILTER (WHERE recommendation = 'NEEDS REVIEW')::int             AS needs_review,
+  COUNT(*) FILTER (WHERE recommendation IS NULL)::int                      AS not_generated,
   COALESCE(SUM(expected_reimbursement) FILTER (WHERE recommendation = 'WARRANTED'), 0)::float8 AS warranted_expected
 FROM fe_bar_appeals.worklist_serving`;
 
@@ -241,6 +268,7 @@ export function toSummary(row: Row | undefined) {
     warranted: num(row?.warranted) ?? 0,
     not_warranted: num(row?.not_warranted) ?? 0,
     needs_review: num(row?.needs_review) ?? 0,
+    not_generated: num(row?.not_generated) ?? 0,
     warranted_expected: num(row?.warranted_expected) ?? 0,
   };
 }

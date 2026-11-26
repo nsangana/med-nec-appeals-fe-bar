@@ -11,6 +11,7 @@ import {
   REVIEW_STATE_SQL,
   ReviewActionBodySchema,
   SUMMARY_SQL,
+  WORKLIST_COUNT_SQL,
   WorklistQuerySchema,
   buildWorklistQuery,
   num,
@@ -177,15 +178,23 @@ createApp({
           res.status(400).json({ error: 'Invalid query parameters' });
           return;
         }
-        const { search, sort, page, page_size } = parsed.data;
+        const { search, sort, page, page_size, recommendation, min_expected } = parsed.data;
+        // Filter params are shared by the page query and the count query ($1..$3).
+        const filters = [searchPattern(search), recommendation, min_expected];
         try {
           const result = await appkit.lakebase.query<Row>(buildWorklistQuery(sort), [
-            searchPattern(search),
+            ...filters,
             page_size,
             page * page_size,
           ]);
           const items = result.rows.map((row) => toWorklistItem(row));
-          const total = result.rows.length > 0 ? (num(result.rows[0].total_count) ?? 0) : 0;
+          let total = result.rows.length > 0 ? (num(result.rows[0].total_count) ?? 0) : 0;
+          // A page past the end of the filtered set returns no rows, so the window count is unavailable.
+          // Ask for the filtered total directly so pagination stays correct.
+          if (result.rows.length === 0 && page > 0) {
+            const countRes = await appkit.lakebase.query<Row>(WORKLIST_COUNT_SQL, filters);
+            total = num(countRes.rows[0]?.total) ?? 0;
+          }
           res.json({ items, total, page, page_size });
         } catch (err) {
           sendLakebaseError(res, 'worklist', err);

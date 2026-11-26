@@ -4,7 +4,11 @@ import {
   ReviewActionBodySchema,
   WorklistQuerySchema,
   LATEST_EDIT_SQL,
+  SUMMARY_SQL,
+  WORKLIST_COUNT_SQL,
+  WORKLIST_SORTS,
   buildWorklistQuery,
+  toSummary,
   likePattern,
   pdfUrl,
   reviewActionAllowed,
@@ -50,7 +54,7 @@ describe('worklist SQL', () => {
   it('binds every value as a parameter and never embeds the search term', () => {
     const sql = buildWorklistQuery('priority');
     expect(sql).toContain('$1');
-    expect(sql).toContain('LIMIT $2 OFFSET $3');
+    expect(sql).toContain('LIMIT $4 OFFSET $5');
     expect(sql).not.toContain('Marquez');
     expect(sql).toContain('fe_bar_appeals.worklist_serving');
     expect(sql).toContain('public.review_state');
@@ -62,7 +66,7 @@ describe('worklist SQL', () => {
   });
 
   it('selects a fixed ORDER BY for every sort key', () => {
-    for (const sort of ['priority', 'dos_desc', 'dos_asc', 'account_asc', 'account_desc'] as const) {
+    for (const sort of ['priority', 'dos_desc', 'dos_asc', 'account_asc', 'account_desc', 'expected_desc'] as const) {
       expect(buildWorklistQuery(sort)).toContain('ORDER BY');
     }
     expect(buildWorklistQuery('account_desc')).toContain('w."PATIENT_CONTROL_NUMBER" DESC');
@@ -84,7 +88,14 @@ describe('worklist SQL', () => {
 describe('request validation', () => {
   it('defaults the worklist query to priority order, first page, 10 rows', () => {
     const parsed = WorklistQuerySchema.parse({});
-    expect(parsed).toEqual({ search: '', sort: 'priority', page: 0, page_size: 10 });
+    expect(parsed).toEqual({
+      search: '',
+      sort: 'priority',
+      page: 0,
+      page_size: 10,
+      recommendation: 'ALL',
+      min_expected: 0,
+    });
   });
 
   it('rejects an oversized page and an unknown sort key', () => {
@@ -108,6 +119,83 @@ describe('request validation', () => {
   it('rejects action names outside the append-only event set', () => {
     const key = { facility_id: '101', account: '770000001', encounter_nbr: '50000001' };
     expect(ReviewActionBodySchema.safeParse({ ...key, action: 'DELETE' }).success).toBe(false);
+  });
+});
+
+describe('recommendation and expected-reimbursement filters', () => {
+  it('accepts every recommendation filter code and defaults to ALL', () => {
+    for (const recommendation of ['ALL', 'WARRANTED', 'NOT_WARRANTED', 'NEEDS_REVIEW', 'NOT_GENERATED']) {
+      expect(WorklistQuerySchema.safeParse({ recommendation }).success).toBe(true);
+    }
+    expect(WorklistQuerySchema.parse({}).recommendation).toBe('ALL');
+  });
+
+  it('rejects unknown or DB-style recommendation values', () => {
+    expect(WorklistQuerySchema.safeParse({ recommendation: 'WARRANTED; DROP TABLE x' }).success).toBe(false);
+    expect(WorklistQuerySchema.safeParse({ recommendation: 'NOT WARRANTED' }).success).toBe(false);
+    expect(WorklistQuerySchema.safeParse({ recommendation: 'warranted' }).success).toBe(false);
+    expect(WorklistQuerySchema.safeParse({ recommendation: ['WARRANTED', 'ALL'] }).success).toBe(false);
+  });
+
+  it('accepts non-negative numeric min_expected and rejects negative, non-numeric or oversized values', () => {
+    expect(WorklistQuerySchema.parse({ min_expected: '10000' }).min_expected).toBe(10000);
+    expect(WorklistQuerySchema.parse({ min_expected: '0' }).min_expected).toBe(0);
+    expect(WorklistQuerySchema.parse({ min_expected: '2500.5' }).min_expected).toBe(2500.5);
+    expect(WorklistQuerySchema.safeParse({ min_expected: '-1' }).success).toBe(false);
+    expect(WorklistQuerySchema.safeParse({ min_expected: 'abc' }).success).toBe(false);
+    expect(WorklistQuerySchema.safeParse({ min_expected: 'Infinity' }).success).toBe(false);
+    expect(WorklistQuerySchema.safeParse({ min_expected: '1e30' }).success).toBe(false);
+    expect(WorklistQuerySchema.safeParse({ min_expected: ['1', '2'] }).success).toBe(false);
+  });
+
+  it('binds recommendation and min_expected as $2 and $3, never inline', () => {
+    const sql = buildWorklistQuery('priority');
+    expect(sql).toContain('$2::text');
+    expect(sql).toContain('COALESCE(w.expected_reimbursement, 0) >= $3::float8');
+    expect(sql).toContain("$2::text = 'ALL'");
+    expect(sql).toContain("$2::text = 'NOT_GENERATED' AND w.recommendation IS NULL");
+  });
+
+  it('maps each filter code to its DB value inside fixed SQL literals', () => {
+    const sql = buildWorklistQuery('priority');
+    expect(sql).toContain("$2::text = 'WARRANTED' AND w.recommendation = 'WARRANTED'");
+    expect(sql).toContain("$2::text = 'NOT_WARRANTED' AND w.recommendation = 'NOT WARRANTED'");
+    expect(sql).toContain("$2::text = 'NEEDS_REVIEW' AND w.recommendation = 'NEEDS REVIEW'");
+  });
+
+  it('keeps the count query on the same filters ($1..$3 only)', () => {
+    expect(WORKLIST_COUNT_SQL).toContain('COUNT(*)');
+    expect(WORKLIST_COUNT_SQL).toContain('$2::text');
+    expect(WORKLIST_COUNT_SQL).toContain('>= $3::float8');
+    expect(WORKLIST_COUNT_SQL).not.toMatch(/\$[4-9]/);
+    expect(WORKLIST_COUNT_SQL).not.toMatch(/\b(INSERT|UPDATE|DELETE)\b/i);
+  });
+
+  it('adds expected_desc with NULLS LAST and the priority tie-break', () => {
+    expect(WORKLIST_SORTS).toContain('expected_desc');
+    expect(WORKLIST_SORTS).toContain('priority');
+    expect(WORKLIST_SORTS).toContain('dos_desc');
+    expect(buildWorklistQuery('expected_desc')).toMatch(
+      /ORDER BY w\.expected_reimbursement DESC NULLS LAST, w\.priority_rank ASC/,
+    );
+    expect(WorklistQuerySchema.parse({ sort: 'expected_desc' }).sort).toBe('expected_desc');
+    expect(WorklistQuerySchema.safeParse({ sort: 'expected_asc' }).success).toBe(false);
+  });
+});
+
+describe('summary counts', () => {
+  it('counts NULL recommendations as not_generated', () => {
+    expect(SUMMARY_SQL).toMatch(/COUNT\(\*\) FILTER \(WHERE recommendation IS NULL\)::int\s+AS not_generated/);
+    expect(SUMMARY_SQL).not.toMatch(/\$\d/);
+  });
+
+  it('maps not_generated into the summary response, defaulting to 0', () => {
+    expect(toSummary({ total: '5', not_generated: '2', warranted: '3' })).toMatchObject({
+      total: 5,
+      not_generated: 2,
+      warranted: 3,
+    });
+    expect(toSummary(undefined).not_generated).toBe(0);
   });
 });
 
