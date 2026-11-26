@@ -1,6 +1,6 @@
 # FE Bar medical-necessity appeals: business case model (PASS 2, three tiers, Checkpoint 2b costs)
 
-Status: **DRAFT for Naveen's review. Not for the deck.** Retrieval date 2026-11-24 (costs measured 2026-11-24 usage, queried 2026-11-25). Sources in `SOURCES.md` (each row tagged verified / search summary / measured). The Sheet mirrors this file: `Inputs` → `Model`, formulas only. Sheet: https://docs.google.com/spreadsheets/d/1rHqmmLWK1FPXBLosbTqQcNnEuabjqXslimmLAV7400g/edit. Deck figures: `DECK_NUMBERS.md`.
+Status: **Final** (reviewed by Naveen; the deck uses these figures through `DECK_NUMBERS.md`). Retrieval date 2026-11-24 (costs measured 2026-11-24 usage, queried 2026-11-25). Sources in `SOURCES.md` (each row tagged verified / search summary / measured). The Sheet mirrors this file: `Inputs` → `Model`, formulas only. Sheet: https://docs.google.com/spreadsheets/d/1rHqmmLWK1FPXBLosbTqQcNnEuabjqXslimmLAV7400g/edit. Deck figures: `DECK_NUMBERS.md`.
 
 ## Changes vs pass 1
 

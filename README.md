@@ -219,6 +219,26 @@ One hero claim runs through all six stages. The claim is **Elena Marquez** (fict
 
 Full index with stage mapping and real-or-simulated labels: **[evidence/EVIDENCE.md](evidence/EVIDENCE.md)**.
 
+### Where it runs (live workspace)
+Everything below is deployed and can be opened directly in the workspace (requires access to the FEVM workspace
+[`fevm-appeals-hackathon`](https://fevm-appeals-hackathon.cloud.databricks.com/browse?o=7474656043998914)). IDs match `databricks bundle summary` and the evidence files.
+
+| Resource | ID / link | What it shows |
+|---|---|---|
+| Unity Catalog schema | [`appeals_hackathon_catalog.fe_bar_appeals`](https://fevm-appeals-hackathon.cloud.databricks.com/explore/data/appeals_hackathon_catalog/fe_bar_appeals?o=7474656043998914) | Bronze/silver/gold tables, grounding, appeals output, metric view, PHI tags, column masks, lineage |
+| Lakeflow Job (bundle) | [`211997391364769`](https://fevm-appeals-hackathon.cloud.databricks.com/jobs/211997391364769?o=7474656043998914) | 12-task DAG defined as code |
+| Job runs of record | [`317191832078218`](https://fevm-appeals-hackathon.cloud.databricks.com/jobs/211997391364769/runs/317191832078218?o=7474656043998914), [`107638099811940`](https://fevm-appeals-hackathon.cloud.databricks.com/jobs/211997391364769/runs/107638099811940?o=7474656043998914), [`813247927527653`](https://fevm-appeals-hackathon.cloud.databricks.com/jobs/211997391364769/runs/813247927527653?o=7474656043998914) | Three full runs, all SUCCESS: incremental 60 → 120 → 180 appeals (`evidence/08_job_run.md`) |
+| | [`263358598052015`](https://fevm-appeals-hackathon.cloud.databricks.com/jobs/211997391364769/runs/263358598052015?o=7474656043998914) | MLflow GenAI judge run (`evidence/14_mlflow_genai_eval.md`) |
+| | [`120234699538992`](https://fevm-appeals-hackathon.cloud.databricks.com/jobs/211997391364769/runs/120234699538992?o=7474656043998914) | Live verification after parameterizing the bundle: 12/12 SUCCESS, counts unchanged (`evidence/17_bundle_clean_run.md`) |
+| Lakeflow SDP pipeline | [`4873b47b-47a7-4081-97c0-7cdf018c71a1`](https://fevm-appeals-hackathon.cloud.databricks.com/pipelines/4873b47b-47a7-4081-97c0-7cdf018c71a1?o=7474656043998914) | Auto Loader + expectations, bronze → silver → gold (`evidence/01_lakeflow_pipeline.md`) |
+| Lakebase | project `fe-bar-appeals-lakebase`, synced table [`worklist_serving`](https://fevm-appeals-hackathon.cloud.databricks.com/explore/data/fe_bar_appeals_lakebase/fe_bar_appeals/worklist_serving?o=7474656043998914) | Synced worklist + append-only reviewer actions (`evidence/03_lakebase.md`) |
+| Genie space | [`01f1e7ec913217158b231c3e2f18fa20`](https://fevm-appeals-hackathon.cloud.databricks.com/genie/rooms/01f1e7ec913217158b231c3e2f18fa20?o=7474656043998914) | Appeals metrics in plain English, 14/14 benchmarks (`evidence/07_genie.md`) |
+| AI/BI dashboard | [Appeals Automation Agent Insights](https://fevm-appeals-hackathon.cloud.databricks.com/dashboardsv3/01f1e968adcd1e3b93920b557b986458/published?o=7474656043998914) | Cost per appeal from `system.billing` (`evidence/15_cost_dashboard.md`) |
+| Chat agent endpoint | [`fe-bar-appeals-chat`](https://fevm-appeals-hackathon.cloud.databricks.com/ml/endpoints/fe-bar-appeals-chat?o=7474656043998914) | LangGraph agent on Model Serving (`evidence/09_chatbot.md`) |
+| Databricks App | [`fe-bar-appeals-app`](https://fe-bar-appeals-app-7474656043998914.aws.databricksapps.com) | Worklist, case file, chat and Genie (`evidence/06_app.md`) |
+
+The smoke-target runs (`308145351572869` and duplicates) ran in an isolated schema that was destroyed after verification; they are recorded in `evidence/17_bundle_clean_run.md`.
+
 | What | Where | Key result |
 |---|---|---|
 | Pipeline update and expectations | `evidence/01_lakeflow_pipeline.md` | 6 of 538 defect lines dropped; 500 gold encounters |

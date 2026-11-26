@@ -21,7 +21,7 @@ Text map of the v2 Google Slides deck (FE Bar POV), on the Databricks template. 
 | 5 | Today, each appeal is rebuilt by hand from three systems, and deadlines slip | Problem + hero intro (fictional patient, CO50, $24,850, 9 days) |
 | 6 | Each morning, new denials arrive with a letter ready for approval | Workflow + hero thread (ranked #1) |
 | 7 | One governed platform replaces three disconnected systems | Platform (ARCH spec) |
-| 8 | One governed platform replaces three disconnected systems | Platform detail: reference architecture by layer (sources → ingest, agentic AI, governance, Lakebase → serve → teams and outcomes) |
+| 8 | Double click into the architecture and components of the solution | Platform detail: reference architecture by layer (sources → ingest, agentic AI, governance, Lakebase → serve → teams and outcomes) |
 | 9 | Demo: one denial moves from worklist to approved appeal | Demo = payoff of the hero thread |
 | 10 | Accurate on synthetic data; the dollars are projected | Demonstrated vs projected |
 | 11 | A 90-day pilot on one payer and one code tests the value range | Pilot scope and criteria |
