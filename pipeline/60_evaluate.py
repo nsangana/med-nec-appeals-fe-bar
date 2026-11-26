@@ -26,8 +26,23 @@ from datetime import datetime, timezone
 import mlflow
 from pyspark.sql import functions as F
 
-CATALOG = "appeals_hackathon_catalog"
-SCHEMA = "fe_bar_appeals"
+def _param(name, default):
+    """Job base_parameters / widgets with a local default for interactive runs."""
+    try:
+        dbutils.widgets.text(name, default)  # noqa: F821 (provided by the Databricks runtime)
+        return dbutils.widgets.get(name)  # noqa: F821
+    except NameError:
+        return default
+
+CATALOG_DEFAULT = "appeals_hackathon_catalog"  # live value; the job passes the bundle target's catalog
+SCHEMA_DEFAULT = "fe_bar_appeals"  # live value; the job passes the bundle target's schema
+CATALOG = _param("catalog", CATALOG_DEFAULT).strip()
+SCHEMA = _param("schema", SCHEMA_DEFAULT).strip()
+for _name, _val in (("catalog", CATALOG), ("schema", SCHEMA)):
+    # Object names (tables, views, functions, volumes, paths) are built from these two values only.
+    # Plain identifiers only: no quotes, dots, spaces or SQL, so nothing user-supplied reaches SQL text.
+    if not re.fullmatch(r"[A-Za-z0-9_]+", _val):
+        raise ValueError(f"{_name} must be a plain identifier, got {_val!r}")
 FQ = f"{CATALOG}.{SCHEMA}"
 CLASSES = ["WARRANTED", "NOT WARRANTED", "NEEDS REVIEW"]
 MLFLOW_EXPERIMENT = "/Shared/fe-bar-appeals-eval"  # shared path: no personal user folder in the repo

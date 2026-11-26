@@ -1,22 +1,27 @@
--- FE Bar metric view: appeals_hackathon_catalog.fe_bar_appeals.appeals_metrics
+-- FE Bar metric view: appeals_metrics
 -- Grain: one row per denied encounter (gold_denial_worklist). Joins are many-to-one (appeals_output is one row per
 -- encounter key), LEFT OUTER, so every worklist encounter is counted even before an appeal is generated.
 -- Metric view joins can't be used directly at query time: Genie and the app wrap this view in a CTE when they need other tables.
 -- Cost per appeal is an ESTIMATE (cost_assumptions row, is_estimate = TRUE) until the orchestrator writes the measured value.
 -- Requires DBR 17.2+ for YAML 1.1 (comment fields on dimensions and measures).
-CREATE OR REPLACE VIEW appeals_hackathon_catalog.fe_bar_appeals.appeals_metrics
+-- Parameters (SQL task): :catalog and :schema. Every statement after this point resolves unqualified
+-- object names against them (the session keeps the USE settings for the whole file).
+USE CATALOG IDENTIFIER(:catalog);
+USE SCHEMA IDENTIFIER(:schema);
+
+CREATE OR REPLACE VIEW appeals_metrics
 WITH METRICS
 LANGUAGE YAML
 AS $$
   version: 1.1
   comment: "FE Bar medical-necessity appeals KPIs. One row per denied encounter (gold worklist) with its generated appeal. Dollar measures use expected_reimbursement (contracted/allowed), not billed charges. Cost per appeal is an ESTIMATE until replaced with measured billing."
-  source: appeals_hackathon_catalog.fe_bar_appeals.gold_denial_worklist
+  source: gold_denial_worklist
   joins:
     - name: appeals
-      source: appeals_hackathon_catalog.fe_bar_appeals.appeals_output
+      source: appeals_output
       on: source.FACILITY_ID = appeals.FACILITY_ID AND source.PATIENT_CONTROL_NUMBER = appeals.PATIENT_CONTROL_NUMBER AND source.ENCOUNTER_NBR = appeals.ENCOUNTER_NBR
     - name: review
-      source: appeals_hackathon_catalog.fe_bar_appeals.review_state_uc
+      source: review_state_uc
       on: source.FACILITY_ID = review.facility_id AND source.PATIENT_CONTROL_NUMBER = review.patient_control_number AND source.ENCOUNTER_NBR = review.encounter_nbr
   dimensions:
     - name: payer
@@ -78,6 +83,6 @@ AS $$
       expr: SUM(CASE WHEN appeals.recommendation = 'WARRANTED' AND deadline_status <> 'PAST_DUE' THEN expected_reimbursement END)
       comment: "PROTOTYPE, ILLUSTRATIVE, synthetic data. Expected reimbursement of WARRANTED appeals whose window is still open. Not a forecast and not a customer result."
     - name: Cost Per Appeal (ESTIMATE)
-      expr: MAX((SELECT c.unit_cost_usd FROM appeals_hackathon_catalog.fe_bar_appeals.cost_assumptions c WHERE c.assumption_key = 'cost_per_appeal_usd'))
+      expr: MAX((SELECT c.unit_cost_usd FROM cost_assumptions c WHERE c.assumption_key = 'cost_per_appeal_usd'))
       comment: "ESTIMATE, not measured. USD per generated appeal, from cost_assumptions. Replace with the system.billing figure."
 $$;

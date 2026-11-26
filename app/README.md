@@ -5,7 +5,7 @@ FE Bar medical-necessity appeals worklist (AppKit). Worklist and review decision
 Letters, data sheets and AI worksheets are PDFs in the UC volume `appeals_hackathon_catalog.fe_bar_appeals.appeal_pdfs`,
 served OBO. Chat goes to the serving endpoint `fe-bar-appeals-chat`. Workspace: `fevm-appeals-hackathon`.
 
-Deploy app: `fe-bar-appeals-app`. Grants that the app service principal still needs are in `../lakebase/APP_GRANTS_PENDING.md`.
+Deploy app: `fe-bar-appeals-app`. Grant and binding status (the one pending item is the reviewer UC grants) is in `../lakebase/APP_GRANTS.md`.
 
 A Databricks App powered by [AppKit](https://developers.databricks.com/docs/appkit/v0/), featuring React, TypeScript, and Tailwind CSS.
 

@@ -1,0 +1,24 @@
+# Follows the volume resource pattern in bundle-examples knowledge_base/write_from_job_to_volume.
+# Bound to the LIVE managed volumes landing / raw_references / appeal_pdfs (bundle deployment bind). No grants blocks.
+resources:
+  volumes:
+    fe_bar_landing:
+      catalog_name: ${var.catalog}
+      schema_name: ${var.schema}
+      name: landing
+      volume_type: MANAGED
+      comment: "Raw synthetic claim/denial and clinical-note files landed by the generator task, ingested by the SDP pipeline with Auto Loader."
+
+    fe_bar_raw_references:
+      catalog_name: ${var.catalog}
+      schema_name: ${var.schema}
+      name: raw_references
+      volume_type: MANAGED
+      comment: "Public reference documents: BCBS med-nec criteria PDF, CMS definition PDF, CMS MPFS indicator listing xlsx + descriptors PDF."
+
+    fe_bar_appeal_pdfs:
+      catalog_name: ${var.catalog}
+      schema_name: ${var.schema}
+      name: appeal_pdfs
+      volume_type: MANAGED
+      comment: "Rendered appeal letter + decision worksheet PDFs."

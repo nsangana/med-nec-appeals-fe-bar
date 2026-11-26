@@ -1,3 +1,4 @@
+# Count note (2026-11-26): this capture is the 2026-11-24 run (32 tests). Current generator/tests: 37 passed (re-run 2026-11-26).
 # note: local home paths redacted to ~ before commit
 # Generator test run (local, stdlib generator + pytest)
 # Command: /tmp/febar_venv/bin/python -m pytest generator/tests -v

@@ -31,6 +31,7 @@ Customer = a fictional, anonymized large multi-state nonprofit health system. Pe
 | 20 | Wanted the evidence to show how the AI was steered (this file) | — | `docs/STEERING_LOG.md`, referenced from README §6 |
 | 21 | Questioned the value of letter edits that don't update the PDF, and the chat/Genie panel needing a scroll to type; weighed effort vs demo impact and chose the no-new-permission option | Edited letter shown as a formatted preview with version chip, word-level "show changes" vs the AI draft, browser-generated final-letter PDF, "Approve version N"; sticky viewport-height chat/Genie panel with pinned input. Server-written PDFs deferred to the pilot (would need a volume write grant) |
 | 22 | Reported the assistant/Genie panel still needed scrolling after the first fix; asked for recommendation and expected-$ filters; asked for parallel agents | Root cause found (panel started below the fold); rebuilt as a full-height sidebar. Filters built by two parallel agents (server query / client chips) against a shared contract; verified on Lakebase |
+| 23 | Asked that the bundle deploy every needed component, including the dashboard; pointed out Genie and dashboards can be exported as JSON for bundles; supplied the Databricks bundle-examples repo | 17 live resources bound into the bundle (dashboard, Genie space from exported JSON, schema, volumes, Lakebase Autoscaling chain, synced table, model, VS index, chat endpoint) with a verified no-op plan; app + grants via `scripts/deploy_all.sh` |
 
 ## B. Business case
 
@@ -40,6 +41,7 @@ Customer = a fictional, anonymized large multi-state nonprofit health system. Pe
 | 2 | Re-authenticated web search so the second pass could use real sources | Kodiak, Optum, Premier, HHS OIG, KFF, MDaudit verified at source |
 | 3 | Asked "what would appeal more to an exec?" → chose three tiers (Floor / Likely / Ceiling), drop the unsourced $27M | Headline range $2M–$4M with ceiling ~$8.7M; ROI framed as payback within a quarter (one-time pilot included) |
 | 4 | Set the personas: VP Revenue Cycle, CDAIO, CFO, Director of Denial Management; $12.8M only as a placeholder | `docs/STAKEHOLDERS.md`; Genie questions and deck KPIs per persona |
+| 5 | Asked for a cost dashboard so he could answer "how did you come up with the cost of automation?"; asked for a critique of that reasoning | "Appeals Automation Agent Insights" AI/BI dashboard on system.billing: direct vs allocated labels, method page, cost-at-volume table (added after the critique); cross-checked to the measured 2b figures |
 
 ## C. Deck
 

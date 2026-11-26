@@ -7,7 +7,12 @@
 -- the LLM input_hash in 20 deliberately excludes them). A changed row keeps
 -- its PDF path NULL so 40 re-renders it; an unchanged row keeps its path. Rows that drop out of grounding are deleted.
 
-CREATE TABLE IF NOT EXISTS appeals_hackathon_catalog.fe_bar_appeals.data_sheet_facts (
+-- Parameters (SQL task): :catalog and :schema. Every statement after this point resolves unqualified
+-- object names against them (the session keeps the USE settings for the whole file).
+USE CATALOG IDENTIFIER(:catalog);
+USE SCHEMA IDENTIFIER(:schema);
+
+CREATE TABLE IF NOT EXISTS data_sheet_facts (
   FACILITY_ID BIGINT, PATIENT_CONTROL_NUMBER BIGINT, ENCOUNTER_NBR BIGINT,
   patient_name STRING, dob_text STRING, sex STRING, member_id STRING, claim_number STRING, provider_name STRING,
   payer_name STRING, criteria_payer STRING, criteria_routing STRING, criteria_passages STRING,
@@ -20,14 +25,14 @@ CREATE TABLE IF NOT EXISTS appeals_hackathon_catalog.fe_bar_appeals.data_sheet_f
 )
 COMMENT 'Deterministic data sheet facts per grounded encounter (no LLM). Source of the *_datasheet.pdf renders.';
 
-MERGE INTO appeals_hackathon_catalog.fe_bar_appeals.data_sheet_facts AS t
+MERGE INTO data_sheet_facts AS t
 USING (
   WITH crit_src AS (
     SELECT payer_type,
       concat_ws('\n', transform(sort_array(collect_list(named_struct('id', chunk_id,
           'line', concat('[', source_file, ' ', substr(chunk_id, 1, 8), '] ', chunk_to_retrieve)))), x -> x.line)) AS criteria_passages,
       concat_ws(', ', sort_array(array_distinct(collect_list(source_file)))) AS criteria_sources
-    FROM appeals_hackathon_catalog.fe_bar_appeals.med_nec_criteria
+    FROM med_nec_criteria
     GROUP BY payer_type
   ),
   src AS (
@@ -58,7 +63,7 @@ USING (
       coalesce(g.mpfs_context, '(n/a)') AS mpfs_context,
       coalesce(g.notes_full, '(no notes)') AS notes_verbatim,
       'Payer contract terms: not reviewed (not available in this build)' AS payer_contract_terms
-    FROM appeals_hackathon_catalog.fe_bar_appeals.encounter_grounding g
+    FROM encounter_grounding g
     LEFT JOIN crit_src cr ON cr.payer_type = g.criteria_payer
   )
   SELECT s.*,

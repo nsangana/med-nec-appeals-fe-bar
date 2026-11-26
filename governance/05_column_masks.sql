@@ -13,7 +13,12 @@
 -- The job and the chat endpoint run as the owner (a group member), so they keep real values.
 -- Requires USE CATALOG/USE SCHEMA and EXECUTE on mask_phi, plus MANAGE and SELECT on each table (owner has both).
 
-CREATE OR REPLACE FUNCTION appeals_hackathon_catalog.fe_bar_appeals.mask_phi(val STRING)
+-- Parameters (SQL task): :catalog and :schema. Every statement after this point resolves unqualified
+-- object names against them (the session keeps the USE settings for the whole file).
+USE CATALOG IDENTIFIER(:catalog);
+USE SCHEMA IDENTIFIER(:schema);
+
+CREATE OR REPLACE FUNCTION mask_phi(val STRING)
 RETURNS STRING
 COMMENT 'PHI column mask (synthetic demo). Returns the real value to members of workspace group fe-bar-appeals-reviewers and to the app service principal 059b0419-b956-41e1-a788-e5104b645dc9 (Genie tab). Everyone else gets ***MASKED***. Identity checks (is_member, session_user) run as the INVOKER inside masks (docs: functions that check user context run as the invoker).'
 RETURN CASE
@@ -23,21 +28,21 @@ RETURN CASE
 END;
 
 -- appeals_output (managed Delta; written by MERGE in 30_generate_appeals.sql and 40_render_pdfs.py)
-ALTER TABLE appeals_hackathon_catalog.fe_bar_appeals.appeals_output
-  ALTER COLUMN patient_name SET MASK appeals_hackathon_catalog.fe_bar_appeals.mask_phi;
+ALTER TABLE appeals_output
+  ALTER COLUMN patient_name SET MASK mask_phi;
 
 -- data_sheet_facts (managed Delta; CREATE TABLE IF NOT EXISTS + MERGE only, so the mask survives job runs)
-ALTER TABLE appeals_hackathon_catalog.fe_bar_appeals.data_sheet_facts
-  ALTER COLUMN patient_name SET MASK appeals_hackathon_catalog.fe_bar_appeals.mask_phi;
-ALTER TABLE appeals_hackathon_catalog.fe_bar_appeals.data_sheet_facts
-  ALTER COLUMN member_id SET MASK appeals_hackathon_catalog.fe_bar_appeals.mask_phi;
-ALTER TABLE appeals_hackathon_catalog.fe_bar_appeals.data_sheet_facts
-  ALTER COLUMN dob_text SET MASK appeals_hackathon_catalog.fe_bar_appeals.mask_phi;
+ALTER TABLE data_sheet_facts
+  ALTER COLUMN patient_name SET MASK mask_phi;
+ALTER TABLE data_sheet_facts
+  ALTER COLUMN member_id SET MASK mask_phi;
+ALTER TABLE data_sheet_facts
+  ALTER COLUMN dob_text SET MASK mask_phi;
 
 
 -- 2026-11-26 (orchestrator): session_user() replaces current_user() per docs recommendation; TIMESTAMP variant for dob;
 -- encounter_grounding masked too (docs: masks are retained when a table is replaced if the column names are unchanged).
-CREATE OR REPLACE FUNCTION appeals_hackathon_catalog.fe_bar_appeals.mask_phi_ts(val TIMESTAMP)
+CREATE OR REPLACE FUNCTION mask_phi_ts(val TIMESTAMP)
 RETURNS TIMESTAMP
 COMMENT 'PHI column mask for TIMESTAMP columns (DOB). Real value for fe-bar-appeals-reviewers members and the app SP; NULL for everyone else.'
 RETURN CASE
@@ -45,9 +50,9 @@ RETURN CASE
   WHEN session_user() = '059b0419-b956-41e1-a788-e5104b645dc9' THEN val
   ELSE CAST(NULL AS TIMESTAMP)
 END;
-ALTER TABLE appeals_hackathon_catalog.fe_bar_appeals.encounter_grounding
-  ALTER COLUMN patient_name SET MASK appeals_hackathon_catalog.fe_bar_appeals.mask_phi;
-ALTER TABLE appeals_hackathon_catalog.fe_bar_appeals.encounter_grounding
-  ALTER COLUMN member_id SET MASK appeals_hackathon_catalog.fe_bar_appeals.mask_phi;
-ALTER TABLE appeals_hackathon_catalog.fe_bar_appeals.encounter_grounding
-  ALTER COLUMN dob SET MASK appeals_hackathon_catalog.fe_bar_appeals.mask_phi_ts;
+ALTER TABLE encounter_grounding
+  ALTER COLUMN patient_name SET MASK mask_phi;
+ALTER TABLE encounter_grounding
+  ALTER COLUMN member_id SET MASK mask_phi;
+ALTER TABLE encounter_grounding
+  ALTER COLUMN dob SET MASK mask_phi_ts;

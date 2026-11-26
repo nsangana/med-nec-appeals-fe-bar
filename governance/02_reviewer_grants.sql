@@ -14,20 +14,27 @@
 -- =====================================================================================
 
 -- Navigation
-GRANT USE CATALOG ON CATALOG appeals_hackathon_catalog TO `fe-bar-appeals-reviewers`;
-GRANT USE SCHEMA ON SCHEMA appeals_hackathon_catalog.fe_bar_appeals TO `fe-bar-appeals-reviewers`;
+-- Parameters (SQL task): :catalog and :schema. Every statement after this point resolves unqualified
+-- object names against them (the session keeps the USE settings for the whole file).
+USE CATALOG IDENTIFIER(:catalog);
+USE SCHEMA IDENTIFIER(:schema);
+-- Note: a one-part schema name in ON SCHEMA resolves against the USE CATALOG catalog (IDENTIFIER takes one
+-- constant only, so the catalog.schema concatenation is not allowed there).
+
+GRANT USE CATALOG ON CATALOG IDENTIFIER(:catalog) TO `fe-bar-appeals-reviewers`;
+GRANT USE SCHEMA ON SCHEMA IDENTIFIER(:schema) TO `fe-bar-appeals-reviewers`;
 
 -- Read the worklist, the generated appeals and the metric view (used by the Genie space)
-GRANT SELECT ON TABLE appeals_hackathon_catalog.fe_bar_appeals.gold_denial_worklist TO `fe-bar-appeals-reviewers`;
-GRANT SELECT ON TABLE appeals_hackathon_catalog.fe_bar_appeals.appeals_output TO `fe-bar-appeals-reviewers`;
-GRANT SELECT ON TABLE appeals_hackathon_catalog.fe_bar_appeals.worklist_serving TO `fe-bar-appeals-reviewers`;
-GRANT SELECT ON VIEW appeals_hackathon_catalog.fe_bar_appeals.appeals_metrics TO `fe-bar-appeals-reviewers`;
+GRANT SELECT ON TABLE gold_denial_worklist TO `fe-bar-appeals-reviewers`;
+GRANT SELECT ON TABLE appeals_output TO `fe-bar-appeals-reviewers`;
+GRANT SELECT ON TABLE worklist_serving TO `fe-bar-appeals-reviewers`;
+GRANT SELECT ON VIEW appeals_metrics TO `fe-bar-appeals-reviewers`;
 
 -- Appeal PDFs (letters, cheat sheets, data sheets). Read only.
-GRANT READ VOLUME ON VOLUME appeals_hackathon_catalog.fe_bar_appeals.appeal_pdfs TO `fe-bar-appeals-reviewers`;
+GRANT READ VOLUME ON VOLUME appeal_pdfs TO `fe-bar-appeals-reviewers`;
 
 -- UC functions used by the app and the chatbot. Lookups only. Nothing on bronze, landing or eval labels.
-GRANT EXECUTE ON FUNCTION appeals_hackathon_catalog.fe_bar_appeals.get_appeal TO `fe-bar-appeals-reviewers`;
-GRANT EXECUTE ON FUNCTION appeals_hackathon_catalog.fe_bar_appeals.get_encounter TO `fe-bar-appeals-reviewers`;
-GRANT EXECUTE ON FUNCTION appeals_hackathon_catalog.fe_bar_appeals.mpfs_lookup TO `fe-bar-appeals-reviewers`;
-GRANT EXECUTE ON FUNCTION appeals_hackathon_catalog.fe_bar_appeals.descriptor_lookup TO `fe-bar-appeals-reviewers`;
+GRANT EXECUTE ON FUNCTION get_appeal TO `fe-bar-appeals-reviewers`;
+GRANT EXECUTE ON FUNCTION get_encounter TO `fe-bar-appeals-reviewers`;
+GRANT EXECUTE ON FUNCTION mpfs_lookup TO `fe-bar-appeals-reviewers`;
+GRANT EXECUTE ON FUNCTION descriptor_lookup TO `fe-bar-appeals-reviewers`;

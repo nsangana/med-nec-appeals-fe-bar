@@ -1,5 +1,9 @@
 # FE Bar build — shared SPEC (source of truth for every build agent)
 
+> **Historical record.** Build-time working log / contract kept as process evidence;
+> intermediate states and values are historical;
+> the current state is in README.md and evidence/EVIDENCE.md.
+
 Plan of record: `<local plan of record>` (Phase 3, P0). This file fixes the **interfaces** so agents can
 build in parallel. If you must change an interface, append it to `docs/FINDINGS.md` FIRST, then change it.
 

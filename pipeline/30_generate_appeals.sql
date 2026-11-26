@@ -4,7 +4,7 @@
 --   * CREATE TABLE IF NOT EXISTS, never CREATE OR REPLACE: the render stage writes PDF paths into this table and
 --     a replace would drop them. Change Data Feed is on.
 --   * Candidates = encounter_grounding rows with NO appeals_output row, or whose input_hash changed.
---   * At most 60 candidates per run. Order: hero claim (Elena Marquez, fixed demo key in SPEC) first, then
+--   * At most :max_appeals candidates per run (SQL task parameter, default 60 in the job). Order: hero claim (Elena Marquez, fixed demo key in SPEC) first, then
 --     worklist_tag = NEW (denied yesterday), then lowest priority_rank.
 --   * MERGE: matched rows are overwritten (PDF paths reset to NULL, so the render stage re-renders them);
 --     unmatched rows are inserted. Model call errors (failOnError => false) are NOT written, so that encounter
@@ -15,9 +15,15 @@
 --   * Never-fabricate rule: NEEDS REVIEW and NOT WARRANTED produce NO appeal letter (appeal_letter IS NULL).
 --
 -- Run order: 20_encounter_grounding -> 30_generate_appeals -> 40_render_pdfs.
--- The batch cap (60) is a literal here, not a parameter, so the file runs unchanged as a SQL task.
+-- The batch cap is the :max_appeals parameter, applied as LIMIT CAST(:max_appeals AS INT). A plain LIMIT :n
+-- fails on this warehouse when the value arrives as a string (INVALID_LIMIT_LIKE_EXPRESSION), so it is cast.
 
-CREATE TABLE IF NOT EXISTS appeals_hackathon_catalog.fe_bar_appeals.appeals_output (
+-- Parameters (SQL task): :catalog and :schema. Every statement after this point resolves unqualified
+-- object names against them (the session keeps the USE settings for the whole file).
+USE CATALOG IDENTIFIER(:catalog);
+USE SCHEMA IDENTIFIER(:schema);
+
+CREATE TABLE IF NOT EXISTS appeals_output (
   FACILITY_ID BIGINT, PATIENT_CONTROL_NUMBER BIGINT, ENCOUNTER_NBR BIGINT,
   patient_name STRING, payer_name STRING, criteria_payer STRING, denial_code STRING, reason_text STRING,
   hcpcs_codes STRING, dx_codes STRING, dos TIMESTAMP, total_charges DOUBLE,
@@ -30,19 +36,19 @@ CREATE TABLE IF NOT EXISTS appeals_hackathon_catalog.fe_bar_appeals.appeals_outp
 COMMENT 'Generated appeal recommendation per denied encounter (incremental MERGE from encounter_grounding). Never CREATE OR REPLACE: PDF paths live here.'
 TBLPROPERTIES (delta.enableChangeDataFeed = true);
 
-MERGE INTO appeals_hackathon_catalog.fe_bar_appeals.appeals_output AS t
+MERGE INTO appeals_output AS t
 USING (
   WITH pending AS (
     SELECT g.*
-    FROM appeals_hackathon_catalog.fe_bar_appeals.encounter_grounding g
-    LEFT JOIN appeals_hackathon_catalog.fe_bar_appeals.appeals_output o
+    FROM encounter_grounding g
+    LEFT JOIN appeals_output o
       ON o.FACILITY_ID = g.FACILITY_ID AND o.PATIENT_CONTROL_NUMBER = g.PATIENT_CONTROL_NUMBER AND o.ENCOUNTER_NBR = g.ENCOUNTER_NBR
     WHERE o.FACILITY_ID IS NULL OR o.input_hash IS NULL OR o.input_hash <> g.input_hash
     -- order: hero claim first (fixed demo key, must be in batch 1), then NEW (denied yesterday), then priority_rank
     ORDER BY CASE WHEN g.FACILITY_ID = 101 AND g.PATIENT_CONTROL_NUMBER = 770000001 AND g.ENCOUNTER_NBR = 50000001 THEN 0
                   WHEN g.worklist_tag = 'NEW' THEN 1 ELSE 2 END,
              g.priority_rank
-    LIMIT 60
+    LIMIT CAST(:max_appeals AS INT)
   ),
   gen AS (
     SELECT p.*,

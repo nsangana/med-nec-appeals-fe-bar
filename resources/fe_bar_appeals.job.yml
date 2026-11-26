@@ -5,7 +5,7 @@
 resources:
   jobs:
     fe_bar_appeals_job:
-      name: fe-bar-appeals-job
+      name: ${var.name_prefix}-job
       description: >-
         FE Bar: denied-claim worklist -> grounded appeal determination + letter (WARRANTED / NOT WARRANTED /
         NEEDS REVIEW) + deterministic data sheet -> Lakebase worklist for human review. Synthetic data only.
@@ -27,6 +27,12 @@ resources:
           default: "500"
         - name: as_of_date
           default: ""   # empty = today
+        # Max appeal generations per run (generate_appeals). Smoke uses 5.
+        - name: max_appeals
+          default: ${var.max_appeals}
+        # "true" runs lakebase_sync (Lakebase serving + review state). Smoke sets "false" (no Lakebase in smoke).
+        - name: enable_lakebase_sync
+          default: ${var.enable_lakebase_sync}
         # genai_evaluate: rows per run (latest generations) and the judge-cost guard in USD (estimate printed first)
         - name: genai_max_rows
           default: "60"
@@ -45,6 +51,9 @@ resources:
         - task_key: bootstrap
           notebook_task:
             notebook_path: ../pipeline/00_bootstrap.py
+            base_parameters:
+              catalog: "{{job.parameters.catalog}}"
+              schema: "{{job.parameters.schema}}"
           max_retries: 1
           min_retry_interval_millis: 60000
 
@@ -77,6 +86,9 @@ resources:
             warehouse_id: ${var.warehouse_id}
             file:
               path: ../pipeline/20_encounter_grounding.sql
+            parameters:
+              catalog: "{{job.parameters.catalog}}"
+              schema: "{{job.parameters.schema}}"
           max_retries: 1
           min_retry_interval_millis: 60000
 
@@ -87,6 +99,9 @@ resources:
             warehouse_id: ${var.warehouse_id}
             file:
               path: ../pipeline/25_data_sheet_facts.sql
+            parameters:
+              catalog: "{{job.parameters.catalog}}"
+              schema: "{{job.parameters.schema}}"
           max_retries: 1
           min_retry_interval_millis: 60000
 
@@ -97,6 +112,10 @@ resources:
             warehouse_id: ${var.warehouse_id}
             file:
               path: ../pipeline/30_generate_appeals.sql
+            parameters:
+              catalog: "{{job.parameters.catalog}}"
+              schema: "{{job.parameters.schema}}"
+              max_appeals: "{{job.parameters.max_appeals}}"
           # One retry only: the MERGE is incremental (input_hash), so a retry does not re-bill finished rows.
           max_retries: 1
           min_retry_interval_millis: 120000
@@ -108,6 +127,9 @@ resources:
             - task_key: generate_appeals
           notebook_task:
             notebook_path: ../pipeline/00_bootstrap.py
+            base_parameters:
+              catalog: "{{job.parameters.catalog}}"
+              schema: "{{job.parameters.schema}}"
           max_retries: 1
           min_retry_interval_millis: 60000
 
@@ -117,6 +139,9 @@ resources:
             - task_key: data_sheet_facts
           notebook_task:
             notebook_path: ../pipeline/40_render_pdfs.py
+            base_parameters:
+              catalog: "{{job.parameters.catalog}}"
+              schema: "{{job.parameters.schema}}"
           max_retries: 1
           min_retry_interval_millis: 60000
 
@@ -125,6 +150,10 @@ resources:
             - task_key: render_pdfs
           notebook_task:
             notebook_path: ../pipeline/50_lakebase_sync.py
+            base_parameters:
+              catalog: "{{job.parameters.catalog}}"
+              schema: "{{job.parameters.schema}}"
+              enable_lakebase_sync: "{{job.parameters.enable_lakebase_sync}}"
           max_retries: 2
           min_retry_interval_millis: 60000
 
@@ -133,6 +162,9 @@ resources:
             - task_key: generate_appeals
           notebook_task:
             notebook_path: ../pipeline/60_evaluate.py
+            base_parameters:
+              catalog: "{{job.parameters.catalog}}"
+              schema: "{{job.parameters.schema}}"
           max_retries: 1
           min_retry_interval_millis: 60000
 
@@ -152,3 +184,20 @@ resources:
           max_retries: 1
           min_retry_interval_millis: 60000
           timeout_seconds: 3600
+
+        # Cost attribution views (dashboards/cost_views.sql): every statement is CREATE OR REPLACE VIEW or
+        # CREATE SCHEMA IF NOT EXISTS, so re-runs are safe. The views read appeals_output, so the task also
+        # waits for generate_appeals (which already implies bootstrap through grounding).
+        - task_key: cost_views
+          depends_on:
+            - task_key: bootstrap
+            - task_key: generate_appeals
+          sql_task:
+            warehouse_id: ${var.warehouse_id}
+            file:
+              path: ../dashboards/cost_views.sql
+            parameters:
+              catalog: "{{job.parameters.catalog}}"
+              schema: "{{job.parameters.schema}}"
+          max_retries: 1
+          min_retry_interval_millis: 60000

@@ -1,0 +1,11 @@
+# Follows bundle-examples knowledge_base/genie_space_nyc_taxi/resources/nyc_taxi_genie.genie_space.yml.
+# Bound to the LIVE space 01f1e7ec913217158b231c3e2f18fa20. No permissions block on purpose: the live ACL
+# (app SP + fe-bar-appeals-reviewers CAN_RUN) is managed outside the bundle.
+resources:
+  genie_spaces:
+    fe_bar_appeals_genie:
+      title: ${var.genie_title}
+      description: "RCM leadership view of medical-necessity denial appeals: appealable revenue, deadline risk, AI recommendations, NEEDS REVIEW routing. Synthetic data. Metric view appeals_metrics + gold worklist + appeals_output."
+      file_path: ${var.genie_file}
+      warehouse_id: ${var.warehouse_id}
+      parent_path: /Users/${workspace.current_user.userName}

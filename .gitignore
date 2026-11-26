@@ -16,3 +16,6 @@ app/.databricks/
 .databricks/
 # OS
 .DS_Store
+
+# Rendered per-target dashboard and Genie JSON (scripts/render_configs.py)
+build/

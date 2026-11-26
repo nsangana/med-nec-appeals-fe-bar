@@ -1,3 +1,4 @@
+# Count note (2026-11-26): this capture is from 2026-11-25; sections 1 and 4 show its counts (51 and 24). Counts at 2026-11-26 morning (superseded; current suite in evidence/18_test_results.md: Python 202, app 73): Python 79 passed (generator/tests and genai/), app 73 passed (npx vitest run).
 # note: local home paths redacted to ~ before commit
 # Code review: test and validation output (2026-11-25T21:56:25Z)
 
@@ -100,7 +101,7 @@ name rewritten to the scratch schema (sed, /tmp only). Each run = the full file 
     unchanged from the cold pass (no new summaries, so no LLM calls). grounding = 25 rows, 0 NULL digests.
 5c. input_hash vs production encounter_grounding for the same 25 keys: 25 equal, 0 differ.
 5d. One note edited in scratch medical_records (encounter at priority_rank 2), then full re-run:
-    pending = 1 (only that encounter); cache = 25 rows (new digest at the edit-run timestamp; superseded row pruned);
+    pending = 1 (only that encounter); cache = 25 rows (new digest at the edit-run timestamp; old row pruned);
     input_hash changed for 1 key, unchanged for 24, 0 NULL digests.
 
 5e. Label-join fix (60_evaluate.py). Production eval_case_labels: 500 rows, 500 keys, 1 batch.

@@ -1,0 +1,29 @@
+# DEFAULT (LIVE) TARGET ONLY: delete protection for stateful shared resources.
+# Kept out of resources/*.yml on purpose, so non-live targets (e.g. smoke) can be torn down with
+# `bundle destroy -t smoke` while the live schema, volumes, dashboard and Genie space stay protected.
+# (Lakebase, the chat endpoint, the model and the VS index carry their own guards in targets/default/*.yml.)
+targets:
+  default:
+    resources:
+      schemas:
+        fe_bar_appeals_schema:
+          lifecycle:
+            prevent_destroy: true
+      volumes:
+        fe_bar_landing:
+          lifecycle:
+            prevent_destroy: true
+        fe_bar_raw_references:
+          lifecycle:
+            prevent_destroy: true
+        fe_bar_appeal_pdfs:
+          lifecycle:
+            prevent_destroy: true
+      dashboards:
+        fe_bar_appeals_dashboard:
+          lifecycle:
+            prevent_destroy: true
+      genie_spaces:
+        fe_bar_appeals_genie:
+          lifecycle:
+            prevent_destroy: true

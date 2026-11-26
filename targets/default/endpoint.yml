@@ -1,0 +1,51 @@
+# DEFAULT TARGET ONLY (not deployed to smoke). Model Serving endpoint <name_prefix>-chat (most sensitive resource;
+# kept ONLY because the plan is a strict no-op). Follows the model_serving_endpoint resource type with the served-entity /
+# traffic_config shape that agents.deploy wrote. Bound to the LIVE endpoint (bundle deployment bind). Do NOT deploy a
+# config change here without re-checking `bundle plan`: a served-entity or traffic edit replaces the serving config of
+# the live agent. Served-entity name = <catalog>-<schema>-<chat_model>_2 (the live name with the defaults).
+# Scale-to-zero stays OFF (Naveen's choice; ~$13.5/day, see docs/business_case/COST_2B.md).
+targets:
+  default:
+    resources:
+      model_serving_endpoints:
+        fe_bar_chat_endpoint:
+          name: ${var.name_prefix}-chat
+          config:
+            served_entities:
+              - name: ${var.catalog}-${var.schema}-${var.chat_model}_2
+                entity_name: ${var.catalog}.${var.schema}.${var.chat_model}
+                entity_version: "2"
+                environment_vars:
+                  DB_MODEL_SERVING_HOST_URL: ${workspace.host}
+                  ENABLE_LANGCHAIN_STREAMING: "true"
+                  ENABLE_MLFLOW_TRACING: "true"
+                  MLFLOW_EXPERIMENT_ID: "775120465253827"
+                  RETURN_REQUEST_ID_IN_RESPONSE: "true"
+                scale_to_zero_enabled: false
+                workload_size: Small
+                workload_type: CPU
+              - name: feedback
+                entity_name: ${var.catalog}.${var.schema}.feedback
+                entity_version: "1"
+                scale_to_zero_enabled: false
+                workload_size: Small
+                workload_type: CPU
+            traffic_config:
+              routes:
+                - served_entity_name: ${var.catalog}-${var.schema}-${var.chat_model}_2
+                  traffic_percentage: 100
+                - served_entity_name: feedback
+                  traffic_percentage: 0
+          ai_gateway:
+            inference_table_config:
+              catalog_name: ${var.catalog}
+              schema_name: ${var.schema}
+              table_name_prefix: ${var.chat_model}
+              enabled: true
+            usage_tracking_config:
+              enabled: false
+          tags:
+            - key: ai_generated_source
+              value: databricks-ml-training-skill
+          lifecycle:
+            prevent_destroy: true

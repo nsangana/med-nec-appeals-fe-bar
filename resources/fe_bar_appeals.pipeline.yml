@@ -3,12 +3,17 @@
 resources:
   pipelines:
     fe_bar_appeals_sdp:
-      name: fe-bar-appeals-sdp
+      name: ${var.name_prefix}-sdp
       catalog: ${var.catalog}
       schema: ${var.schema}
       serverless: true
       channel: CURRENT
       continuous: false
+      # SQL source reads these as ${landing_root} / ${refs_root} (sdp/01_bronze.sql, sdp/04_reference.sql).
+      # Defaults reproduce the live volume paths; smoke resolves to its own schema.
+      configuration:
+        landing_root: /Volumes/${var.catalog}/${var.schema}/landing
+        refs_root: /Volumes/${var.catalog}/${var.schema}/raw_references
       libraries:
         - glob:
             include: ../sdp/**

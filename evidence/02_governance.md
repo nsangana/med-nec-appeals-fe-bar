@@ -170,7 +170,7 @@ Genie space `01f1e7ec913217158b231c3e2f18fa20` ("FE Bar – Medical Necessity Ap
 | admins | CAN_MANAGE |
 
 Note: `fe-bar-appeals-reviewers` is a workspace-level group. UC table/volume/function grants (`governance/02_reviewer_grants.sql`)
-need an account-level group and remain pending. (Superseded 2026-11-25: inside the app, Genie now runs as the app service principal — see `governance/04_app_sp_genie_grants.sql`; in the Genie UI itself it still runs as the user, so a reviewer there needs UC SELECT on the
+need an account-level group and remain pending. (Current as of 2026-11-25: inside the app, Genie now runs as the app service principal — see `governance/04_app_sp_genie_grants.sql`; in the Genie UI itself it still runs as the user, so a reviewer there needs UC SELECT on the
 space's tables to get answers.
 
 ## Workspace ACL: app (applied 2026-11-24 with Naveen's approval)

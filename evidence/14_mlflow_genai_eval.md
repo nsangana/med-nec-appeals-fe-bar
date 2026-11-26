@@ -5,16 +5,19 @@ Source: job task `genai_evaluate` (`pipeline/65_genai_evaluate.py`), run alone w
 Synthetic data only. Labels are the generator's designed cases. Results tables:
 `appeals_hackathon_catalog.fe_bar_appeals.genai_eval_summary` and `genai_eval_results`.
 
-## 1. Run identity
+History: earlier runs are in git history.
+
+## 1. Run identity (current, re-queried 2026-11-26)
 
 | Item | Value |
 |---|---|
-| **Current run** | job run `263358598052015` (SUCCESS, about 2 min, judge calls only); Delta run `b33ad37c-6321-44c3-adb6-1723546928a8`; MLflow experiment `/Shared/fe-bar-appeals-eval` (id `3809195264341261`), MLflow run `a91c379499cd4368aed42cff7824517b` |
-| Superseded: MLflow run `b5609faba6534b5a9d6aa772f3c85e18` (Delta `21d98aa5-…`, job run `127892055268570`) | **Superseded.** Reason: the groundedness context left out the CLAIM-block identifiers (patient name, member ID, claim number and similar) that the generator saw, so correctly grounded letters were marked ungrounded. The context was rebuilt from the generator's own prompt blocks and the same 60 rows were rerun. Kept in the experiment and the Delta tables as a record. |
-| Superseded: job run `348496743623928` (MLflow `ca079c25…`) | First attempt, aggregation bug (NULL pass rates). Its Delta rows were deleted; the MLflow run stays as a record. |
+| Job run | `263358598052015` (SUCCESS, about 2 min, judge calls only) |
+| Delta run | `b33ad37c-6321-44c3-adb6-1723546928a8` (`run_ts` 2026-11-26T04:23:46.789Z) |
+| MLflow experiment | `/Shared/fe-bar-appeals-eval` (id `3809195264341261`) |
+| MLflow run | `a91c379499cd4368aed42cff7824517b` |
 | Judge model | `databricks:/databricks-claude-sonnet-4-6` (Databricks-hosted) |
 | Rows evaluated | 60 (the 60 most recent `appeals_output` rows by `generated_at`, batch 3). `appeals_output` has 180 rows. 0 excluded for a grounding change. |
-| Traces | 60 (one per row), state OK, 2 spans each (root replay + RETRIEVER), 0 scorer errors |
+| Traces | 60 (one per row), 2 spans each (root replay + RETRIEVER), 0 scorer errors |
 
 ## 2. What the run does
 
@@ -47,7 +50,7 @@ No-fabrication guideline (verbatim):
 
 Quote metrics (per quote, the comparable figures; 661 quoted spans in these 60 rows):
 
-| Metric | 60 rows (this run) | 180 rows (`11_eval_180.md`) |
+| Metric | 60 rows (this run) | 180 rows (`11_eval_180.md`, `eval_summary`) |
 |---|---|---|
 | Quote verified, **normalised** | **89.7%** (593 / 661) | 85.3% |
 | Quote verified, **strict** | **58.7%** (388 / 661) | 54.7% |
@@ -62,20 +65,6 @@ Per-scorer pass rates (rows):
 
 Detail (not a headline): rows where every quoted span verifies. Strict 0 of 60 (one unverified span fails the whole row).
 Normalised 23 of 60 (38.3%). A single paraphrase fails a row, so these row-level figures understate how well quotes match.
-
-Change against the superseded run (same 60 rows):
-
-| Scorer | Superseded `b5609fab…` | Current `a91c379…` |
-|---|---|---|
-| groundedness | 83.3% (50/60) | 98.3% (59/60) |
-| no_fabricated_evidence | 98.3% (59/60) | 96.7% (58/60) |
-| determination_matches_label | 95.0% | 95.0% |
-| quote per-quote normalised / strict | 89.7% / 58.7% | 89.7% / 58.7% (unchanged; quote logic not changed) |
-
-The groundedness change is the context fix. The small no-fabrication change is one judge verdict (section 5).
-
-Determination mismatches (3, all WARRANTED → NEEDS REVIEW, the same date-of-service conflicts as the `11_eval_180.md`
-section 4 list): PCNs 770000081, 770000204, 770000378. No unsafe call (WARRANTED where not expected).
 
 ## 5. Remaining judge fails (current run)
 
@@ -96,13 +85,15 @@ No-fabrication: **two** rows.
   works through each cited fact, concludes "the response complies with the guideline", and then returns **no**. The verdict
   contradicts the judge's own reasoning. Judge noise; reported, not overridden.
 
-Determination mismatches (3): PCNs 770000081, 770000204, 770000378 (see section 4).
+Determination mismatches (3, all WARRANTED → NEEDS REVIEW, the same date-of-service conflicts as the `11_eval_180.md`
+section 4 list): PCNs 770000081 (trace `tr-32ff76d26b93b1cc1d64010000648cae`), 770000204 (`tr-ad6c59ee567f9e67b8db06b37685a2ca`),
+770000378 (`tr-de3a5ecadb16d5d1f397bbeb5f88725f`). No unsafe call (WARRANTED where not expected).
 
 ## 6. Example rows (current run)
 
 **(a) Pass.** PCN 770000003 (WARRANTED, expected WARRANTED), trace `tr-73f4d5d75321369e0685229ff9461c2a`. groundedness yes,
-no_fabricated_evidence yes, determination yes. Quotes 18/18 normalised, 11/18 strict. The claim chunk now carries the patient name,
-so the identifier flag that appeared earlier no longer fires.
+no_fabricated_evidence yes, determination yes. Quotes 18/18 normalised, 11/18 strict. The claim chunk carries the patient name,
+so the identifier flag that appeared in earlier drafts of this run no longer fires.
 
 **(b) Judge-flagged.** PCN 770000483 (NEEDS REVIEW, expected NEEDS REVIEW), trace `tr-474c2a4e5c5a005a8c34e72791dec566`,
 groundedness **no** (external clinical and CPT knowledge in the worksheet; section 5).
@@ -125,17 +116,15 @@ tokens per call; Sonnet 4.6 list $3 input / $15 output per 1M tokens; 2 judge ca
 The 180-row evaluation was not run. The job refuses any run whose estimate exceeds `cost_cap_usd` (job parameter
 `genai_cost_cap_usd`, default 5). The default `genai_max_rows` is 60.
 
-Measured: **pending**. `system.billing.usage` had not posted this run at the check time; re-check with
-`usage_metadata.job_run_id = '263358598052015'`.
+Measured: **pending**. `system.billing.usage` had no rows for `usage_metadata.job_run_id = '263358598052015'` at the 2026-11-26 check. Re-check later.
 
 ## 8. Reading the groundedness and quote metrics together
 
 - They measure different things. The quote metrics check copying: whether a quoted span appears in the grounding. Groundedness
   checks support: whether each claim is implied by the grounding, verbatim or not.
-- Quote misses occur in both grounded and ungrounded rows, and the earlier cross-tab (superseded run) showed no ungrounded row
-  with every span verbatim. Quotes are therefore a weak proxy for groundedness; neither substitutes for the other.
-- The superseded run's groundedness drop was the identifier artifact. With the claim block in the context the remaining judge
-  flags are about worksheet reasoning that goes beyond the notes and criteria. That is the signal a reviewer should look at.
+- Quote misses occur in both grounded and ungrounded rows, so quotes are a weak proxy for groundedness. Neither substitutes for the other.
+- With the claim block in the context, the remaining judge flags are about worksheet reasoning that goes beyond the notes and
+  criteria. That is the signal a reviewer should look at.
 - Judge variance remains (PCN 770000162 verdict contradicts its reasoning). Treat single-row judge verdicts as noisy and read a
   sample before relying on a rate.
 
@@ -143,9 +132,9 @@ Measured: **pending**. `system.billing.usage` had not posted this run at the che
 
 - Each evaluated row produces one trace with a RETRIEVER span (the grounding) and the replayed generation. The assessments attach to
   the trace; read with `mlflow.search_traces(locations=[experiment_id], run_id=...)`.
-- Chat endpoint `fe-bar-appeals-chat` (read-only check, not redeployed): `ENABLE_MLFLOW_TRACING=true`,
-  `MLFLOW_EXPERIMENT_ID=775120465253827` (`/Users/naveen.sangana@databricks.com/fe-bar-appeals-chat`). `search_traces` returned
-  **0 traces** there and in `/Shared/fe-bar-appeals-chat` at check time. No chat traces are recorded yet.
+- Chat endpoint `fe-bar-appeals-chat`: `ENABLE_MLFLOW_TRACING=true`, `MLFLOW_EXPERIMENT_ID=775120465253827`. At the last check
+  `search_traces` returned **0 traces** there and in `/Shared/fe-bar-appeals-chat`. No chat traces are recorded yet. This was not
+  re-checked on 2026-11-26.
 
 ## 9. Deviations and limitations
 
@@ -157,13 +146,12 @@ Measured: **pending**. `system.billing.usage` had not posted this run at the che
 - **Row-level strict quote pass** is 0% because one span fails the row; shown as a detail only.
 - **Cost.** 60 rows, not 180. Measured billing pending.
 - **Tests.** Scorer and context logic in `genai/eval_logic.py`; 26 unit tests in `genai/test_eval_logic.py`, including the drift
-  guard against `pipeline/30_generate_appeals.sql`. Full repo suite: 79 passing.
+  guard against `pipeline/30_generate_appeals.sql`. Python suite (`generator/tests` and `genai/`): 79 passed (re-run 2026-11-26).
 
 ## 10. Artifacts
 
 - Notebook: `pipeline/65_genai_evaluate.py` (job task `genai_evaluate`, after `evaluate`; environment `genai_eval`,
   `mlflow[databricks]>=3.1`; retries 1; timeout 3600 s).
 - Logic and tests: `genai/eval_logic.py`, `genai/test_eval_logic.py`.
-- Delta: `genai_eval_summary` and `genai_eval_results` (current run `b33ad37c…`; superseded `21d98aa5…` kept).
-- MLflow: experiment `/Shared/fe-bar-appeals-eval`; current run `a91c379499cd4368aed42cff7824517b`; superseded
-  `b5609faba6534b5a9d6aa772f3c85e18` and `ca079c25d7a640c99b5e0131beb11f54`.
+- Delta: `genai_eval_summary` and `genai_eval_results` (current run `b33ad37c…`).
+- MLflow: experiment `/Shared/fe-bar-appeals-eval`; current run `a91c379499cd4368aed42cff7824517b`.

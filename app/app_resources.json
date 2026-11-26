@@ -1,0 +1,13 @@
+{
+  "name": "fe-bar-appeals-app",
+  "description": "FE Bar medical-necessity appeals worklist: Lakebase worklist and review actions, case-file PDFs, appeals agent, optional Genie.",
+  "user_api_scopes": ["files", "genie", "model-serving", "sql"],
+  "compute_size": "MEDIUM",
+  "resources": [
+    {"name": "sql-warehouse", "sql_warehouse": {"id": "559faf81d610a2a1", "permission": "CAN_USE"}},
+    {"name": "files", "uc_securable": {"securable_full_name": "appeals_hackathon_catalog.fe_bar_appeals.appeal_pdfs", "securable_type": "VOLUME", "permission": "READ_VOLUME"}},
+    {"name": "postgres", "postgres": {"branch": "projects/fe-bar-appeals-lakebase/branches/production", "database": "projects/fe-bar-appeals-lakebase/branches/production/databases/appeals", "permission": "CAN_CONNECT_AND_CREATE"}},
+    {"name": "genie-space", "genie_space": {"name": "fe-bar-appeals-genie", "space_id": "01f1e7ec913217158b231c3e2f18fa20", "permission": "CAN_RUN"}},
+    {"name": "serving-endpoint", "serving_endpoint": {"name": "fe-bar-appeals-chat", "permission": "CAN_QUERY"}}
+  ]
+}

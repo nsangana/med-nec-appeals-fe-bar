@@ -1,8 +1,6 @@
 # Medical-necessity appeals on Databricks: FE Bar build
 
-> **DRAFT.** Section 6 ("How I used AI") is a draft. The author must rewrite it in his own words before submission. Other sections are the build narrative and can be edited.
-
-**About this repo.** This build extends my earlier appeals prototype. It is a fresh repository with a fresh git history. It builds in a new schema, `appeals_hackathon_catalog.fe_bar_appeals`, under new resource names (`fe-bar-appeals-*`). The earlier schema, job, endpoint and app were not modified and are not referenced here.
+**About this repo.** This build extends my earlier appeals prototype. It is a new repository. The private repo `naveen-sangana_data/med-nec-appeals-fe-bar` has the full history. The public mirror `nsangana/med-nec-appeals-fe-bar` is a clean snapshot of the final tree. It builds in a new schema, `appeals_hackathon_catalog.fe_bar_appeals`, under new resource names (`fe-bar-appeals-*`). The earlier schema, job, endpoint and app were not modified and are not referenced here.
 
 **Scope.** Synthetic data only. Public reference documents only. Every prototype metric is labelled "prototype, synthetic data". Stage names follow the FE Bar: Lakeflow, Unity Catalog, Lakebase, ML/GenAI, Genie Agent, Databricks App.
 
@@ -27,7 +25,7 @@ The headline range is Floor to Likely on the top-down method. The bottom-up meth
 **Caveats that travel with the numbers**
 - **Likely depends on the 2.0× multiplier.** At 1.5× the top-down Likely is $3.25M; at 3.0× it is $6.50M (DECK_NUMBERS §1).
 - **Bottom-up does not converge with top-down in the Likely case.** Its Floor and Likely are both $1.16M. The gap comes from the $465 average denied amount.
-- **Payback and ROI use placeholder costs.** One-time implementation is $216K (Floor) or $144K (Likely and Ceiling). Annual run cost is $90K or $60K. Both are assumptions to validate with the health system's RCM. At Floor, payback is 1.3 months top-down and 2.5 months bottom-up, and both include the one-time cost. The 20.2× top-down ROI is net benefit ÷ annual cost and excludes the one-time cost.
+- **Payback and ROI use placeholder costs.** One-time implementation is $216K (Floor) or $144K (Likely and Ceiling). Annual run cost is $90K or $60K. Both are assumptions to validate with the health system's RCM. At Floor, payback is 1.3 months top-down and 2.5 months bottom-up, and both include the one-time cost. The 20.2× top-down figure is net benefit ÷ annual cost ("annual return on run cost"). It excludes the one-time cost. Year-1 return including the pilot at Floor is about 6×.
 - **Cost per appeal is measured at prototype scale.** $0.11 variable and $0.51 fully loaded at 60 appeals per day, at list price, not the health system's contracted rates (`evidence/10_cost_per_appeal.md`).
 - **The $12.8M reference figure is a placeholder, not a result.** At Floor rates it would need a 5.9× dollar multiplier. The model does not support it.
 - **Capacity is context, not the headline.** About 1,832 admin hours a year, roughly 1.0 FTE, at Floor and Likely (DECK_NUMBERS §3).
@@ -37,6 +35,8 @@ The headline range is Floor to Likely on the top-down method. The bottom-up meth
 **Who it serves** (roles, per `docs/STAKEHOLDERS.md`): VP of Revenue Cycle (domain owner), Chief Data & AI Officer (technical stakeholder), CFO (executive sponsor), and Director of Denial Management (operational owner).
 
 **Proposed next step.** A 90-day pilot on one payer and one denial code (BCBS of Arizona commercial, CO50), with baseline and pilot windows of equal length. Pilot cost is not in this build (`docs/deck/DECK.md`, slide 10).
+
+**Deck.** Deck v2, "Automate the Appeal. Recover the Revenue.", is on the Databricks template. It has a 12-slide main story and seven appendix slides. The PDF is `docs/deck/FE_Bar_Medical_Necessity_Appeals_POV.pdf`. The slide-by-slide text map and figure sources are in `docs/deck/DECK.md`.
 
 **What the prototype proves (synthetic data only).** On 180 generated encounters, the determination matches the designed label 97.2% of the time (175 of 180). It made no unsafe WARRANTED call (0.0%). All five misses went to NEEDS REVIEW, which is the safe direction (`evidence/11_eval_180.md`). The end-to-end job ran three times in a row, 10 of 10 tasks each time, growing the worklist from 60 to 120 to 180 appeals without regenerating finished ones (`evidence/08_job_run.md`). The eval measures agreement with designed labels. It does not measure payer overturn rates.
 
@@ -63,11 +63,12 @@ One hero claim runs through all six stages. The claim is **Elena Marquez** (fict
 
 **Stage 3: ML/GenAI (determination and letter).**
 - `encounter_grounding` builds one digest per encounter. It injects the payer-routed criteria passages (`med_nec_criteria`, routed by `denial_strategy`), the MPFS coding context, and the dated notes. The Vector Search index `med_nec_criteria_index` serves the chat agent, not the batch.
-- `data_sheet_facts` is built by plain SQL with no LLM. It has one row per grounded encounter, which is 450 at the last count. Each one renders a rule-built data sheet.
+- `data_sheet_facts` is built by plain SQL with no LLM. It has one row per grounded (non-past-due) encounter: 450 in the latest run (the count moves daily as deadlines pass). Each one renders a rule-built data sheet.
 - `appeals_output` gets one `ai_query` call per encounter (`databricks-claude-sonnet-4-6`). It writes with MERGE, capped at 60 per run, hero first, then `NEW`, then priority rank.
 - The output is exactly one of WARRANTED, NOT WARRANTED or NEEDS REVIEW. Any unparseable response becomes NEEDS REVIEW with a `PARSE_FAILURE` reason.
 - The hero is WARRANTED. Its letter quotes dated notes (`evidence/04_genai_generation.md` §5a).
 - Evaluation joins `eval_case_labels` in `pipeline/60_evaluate.py` only and writes `eval_results` and `eval_summary`.
+- The MLflow GenAI judge (`pipeline/65_genai_evaluate.py`) scores stored generations with `databricks-claude-sonnet-4-6`. It covers 60 rows, the most recent generations. The full 180 is not run because it exceeds the $5 cost cap. Figures are in §5.
 
 **Stage 4: Lakebase (operational serving and review).**
 - `worklist_serving` (Delta, change data feed on) is synced to a Lakebase Autoscaling database as the synced table `fe_bar_appeals.worklist_serving`. It has 500 rows. The app reads it at low latency.
@@ -82,7 +83,7 @@ One hero claim runs through all six stages. The claim is **Elena Marquez** (fict
 - `appeals_metrics` defines appealable revenue, revenue at deadline risk, revenue lost to deadline, warranted rate, NEEDS REVIEW rate, approval rate and cost per appeal.
 - 14 of 14 benchmark questions passed, grouped by stakeholder role. One of them is "What is the status of the claim for Elena Marquez?" The 2026-11-25 re-run on the 180-row state passes all 14 (`evidence/07_genie.md`).
 
-**Stage 7: Databricks App (business surface).** `fe-bar-appeals-app` (AppKit). The worklist is sorted with NEW first, then priority, and carries NEW, AT_RISK and PAST_DUE tags. The case file opens the letter, the data sheet and the AI worksheet together. Reviewers can take actions, ask the chat agent (`fe-bar-appeals-chat`, a LangGraph `ResponsesAgent` over UC functions and the VS index), and use the Genie tab (`evidence/06_app.md`, `evidence/09_chatbot.md`).
+**Stage 7: Databricks App (business surface).** `fe-bar-appeals-app` (AppKit). The worklist is sorted with NEW first, then priority, and carries NEW, AT_RISK and PAST_DUE tags. Recommendation chips show a count for each outcome. A "≥ $10K expected" toggle and an expected-$ sort narrow the list. The case file opens the letter, the data sheet and the AI worksheet together. The edited letter has a preview with "Show changes" and a PDF download in the browser. A full-height assistant sidebar holds the chat agent (`fe-bar-appeals-chat`, a LangGraph `ResponsesAgent` over UC functions and the VS index) and the Genie tab. Reviewers can take actions (`evidence/06_app.md`, `evidence/09_chatbot.md`).
 
 **Demo path for the hero.** Worklist (rank 1, AT_RISK, 9 days) → case file → letter and data sheet → Approve → Submit (simulated) → Genie question on the claim's status → chat question on the evidence.
 
@@ -162,7 +163,7 @@ One hero claim runs through all six stages. The claim is **Elena Marquez** (fict
                            lakebase_sync
 ```
 
-- The job has 11 tasks. `genai_evaluate` (`pipeline/65_genai_evaluate.py`) runs after `evaluate`. The three 10-task runs in `evidence/08_job_run.md` predate it.
+- The job has 12 tasks. `genai_evaluate` (`pipeline/65_genai_evaluate.py`) runs after `evaluate`, and `cost_views` refreshes the cost-dashboard views. The three 10-task runs in `evidence/08_job_run.md` predate it.
 - The job is a Databricks Asset Bundle. Python tasks run on serverless compute. SQL tasks run on the shared SQL warehouse.
 - Retries: 1 to 2 per task. The generation MERGE is incremental, so a retry does not re-bill finished rows.
 - The schedule is a daily cron at 04:00 America/Phoenix, **PAUSED** to control cost.
@@ -178,7 +179,7 @@ One hero claim runs through all six stages. The claim is **Elena Marquez** (fict
 | Genie tab | **App service principal** (CAN_RUN on the space, SELECT on its five objects) | The forwarded user token never carried the `genie` scope, even after a scope change and redeploy. The Genie tab therefore runs as the SP. Trade-off: Genie answers reflect the app's access, not each reviewer's grants. |
 | Job tasks | The identity that deploys the bundle (no `run_as` set) | Simplest for a demo. Production would use a service principal. |
 
-**Column masks (governance).** `mask_phi` and `mask_phi_ts` (`governance/05_column_masks.sql`) are attached to `appeals_output.patient_name`, `data_sheet_facts` (name, member ID, DOB text) and `encounter_grounding` (name, member ID, DOB). Members of the workspace group `fe-bar-appeals-reviewers`, and the app service principal, see real values. Everyone else sees `***MASKED***`, or NULL for DOB. The job and the chat endpoint run as the group member, so they keep real values. Lakebase copies, appeal PDFs and SDP-managed tables are not masked (`evidence/13_column_masks.md`).
+**Column masks (governance).** `mask_phi` and `mask_phi_ts` (`governance/05_column_masks.sql`) are attached to seven PHI columns: `appeals_output.patient_name`, `data_sheet_facts` (name, member ID, DOB text) and `encounter_grounding` (name, member ID, DOB). The masks survive the grounding rebuild, which was verified on 2026-11-26. Members of the workspace group `fe-bar-appeals-reviewers`, and the app service principal, see real values. Everyone else sees `***MASKED***`, or NULL for DOB. The job and the chat endpoint run as the group member, so they keep real values. Lakebase copies, appeal PDFs and SDP-managed tables are not masked (`evidence/13_column_masks.md`).
 
 ---
 
@@ -194,7 +195,7 @@ One hero claim runs through all six stages. The claim is **Elena Marquez** (fict
 
 **Lakebase Autoscaling, not Provisioned, for serving.** The project runs at 0.5 CU with a 300-second suspend (`evidence/03_lakebase.md`). Reviewer actions are an append-only native table, which keeps the audit trail. The worklist is a synced copy, so it refreshes on the job's `lakebase_sync` step rather than live. Postgres keys are uppercase and must be quoted. The trade-off is that the copy can lag the Delta table until the next run.
 
-**Incremental generation with a 60-per-run cap.** A MERGE keys on an `input_hash`. The candidates are rows with no output or a changed hash. The order is hero, then `NEW`, then priority rank. The run log shows 60 rows written and 0 updated in each of three runs, so no finished letter is regenerated (`evidence/04_genai_generation.md` §2). The trade-off is backlog: 450 encounters are grounded and 180 are generated so far. The grounding step is incremental: a digest cache (`encounter_digest_cache`) means each encounter is summarised once, and later runs only re-summarise changed notes (`evidence/08_job_run.md`).
+**Incremental generation with a 60-per-run cap.** A MERGE keys on an `input_hash`. The candidates are rows with no output or a changed hash. The order is hero, then `NEW`, then priority rank. The run log shows 60 rows written and 0 updated in each of three runs, so no finished letter is regenerated (`evidence/04_genai_generation.md` §2). The trade-off is backlog: 460 encounters are grounded and 180 are generated so far. The grounding step is incremental: a digest cache (`encounter_digest_cache`) means each encounter is summarised once, and later runs only re-summarise changed notes (`evidence/08_job_run.md`).
 
 **Genie through the app service principal.** The OBO token did not carry the `genie` scope, so the Genie tab runs as the app SP. The trade-off is that Genie shows the app's access, not per-reviewer grants. The worklist and review actions already run as the SP. PDFs and chat stay on OBO. I approved this on 2026-11-24.
 
@@ -214,6 +215,8 @@ One hero claim runs through all six stages. The claim is **Elena Marquez** (fict
 
 ## 5. Evidence index
 
+**Start with [`evidence/00_LIFECYCLE.md`](evidence/00_LIFECYCLE.md):** the build mapped to design → build → test → validate → deploy, and every enhancement found by testing (root cause → fix → evidence).
+
 Full index with stage mapping and real-or-simulated labels: **[evidence/EVIDENCE.md](evidence/EVIDENCE.md)**.
 
 | What | Where | Key result |
@@ -222,15 +225,18 @@ Full index with stage mapping and real-or-simulated labels: **[evidence/EVIDENCE
 | Governance | `evidence/02_governance.md` | PHI tags; lineage bronze → gold → appeals_output → worklist_serving |
 | Lakebase | `evidence/03_lakebase.md` | 500-row synced worklist; append-only reviewer events |
 | Generation | `evidence/04_genai_generation.md` | 60 per run, 0 rewrites; sample WARRANTED, NOT WARRANTED, NEEDS REVIEW outputs |
-| End-to-end job | `evidence/08_job_run.md` | 3 of 3 full runs SUCCESS (10 of 10 tasks each); 180 appeals: 72 WARRANTED, 66 NOT WARRANTED, 42 NEEDS REVIEW |
+| End-to-end job | `evidence/08_job_run.md` | 3 of 3 full runs SUCCESS (10 of 10 tasks each, before `genai_evaluate` and `cost_views` were added; the job now has 12); 180 appeals: 72 WARRANTED, 66 NOT WARRANTED, 42 NEEDS REVIEW |
 | Eval, 180 encounters | `evidence/11_eval_180.md` | 97.2% accuracy (175 of 180); 0.0% unsafe; 0 parse failures |
 | App API responses | `evidence/06_app.md` | Worklist, case file and review round trip return 200 or 201 |
 | Genie Agent | `evidence/07_genie.md` | 14 of 14 benchmark questions (180-row state, 2026-11-25) |
 | Chat agent | `evidence/09_chatbot.md` | Hero question answered with dated evidence |
-| Cost per appeal | `evidence/10_cost_per_appeal.md` | $0.107 variable; $0.51 fully loaded at 60 per day (list price) |
+| Cost per appeal | `evidence/10_cost_per_appeal.md` | $0.11 variable; $0.51 fully loaded at 60 per day (list price) |
 | Column masks | `evidence/13_column_masks.md` | Member reads real PHI; no masked values in the reviewer view. Non-member path is logic-only |
 | GenAI eval (MLflow judge) | `evidence/14_mlflow_genai_eval.md` | 60 rows: groundedness 98.3%, no fabricated evidence 96.7%, determination match 95.0%; quotes 89.7% normalised / 58.7% strict |
-| Python tests | `generator/tests`, `genai/` | 79 passed (local run, 2026-11-25) |
+| Cost dashboard | `evidence/15_cost_dashboard.md` | "Appeals Automation Agent Insights" (AI/BI): cost by component, per appeal and at volume; $0.52 fully loaded at 60/day, $0.24 at 180/day, $0.14 at 600/day (list price) |
+| Deck | `docs/deck/DECK.md`, `docs/deck/FE_Bar_Medical_Necessity_Appeals_POV.pdf` | Deck v2: 12-slide main story plus appendix (19 pages), figure sources per slide |
+| Python tests | `generator/tests`, `genai/` | 202 passed (local run) |
+| App tests | `app/` (Vitest) | 73 passed |
 
 Business-case numbers are in `docs/business_case/DECK_NUMBERS.md`.
 
@@ -238,35 +244,29 @@ Business-case numbers are in `docs/business_case/DECK_NUMBERS.md`.
 
 ## 6. How I used AI
 
-**Steering evidence:** [`docs/STEERING_LOG.md`](docs/STEERING_LOG.md) records each direction and course correction the builder gave the AI (solution, business case, deck) and what changed as a result.
+I used **Claude Code and Isaac** throughout the build. Claude Code helped me coordinate the implementation, testing, debugging and evidence collection. I also used Isaac while building and reviewing the solution and the Google Slides deck, including slide construction, rendering and visual checks. I supplied the customer context, made the architecture and business decisions, tested the live application and decided what needed to change.
 
-> **DRAFT. Builder to edit in his or her own words.** The FE Bar attestation requires that the work, decisions and narrative are mine. This section is a starting point to rewrite, not a statement to submit as written.
+I started from a problem raised in a discovery conversation: the denial-management team was rebuilding medical-necessity appeals by searching across claims, clinical notes and payer criteria. I wanted to show an automated morning worklist, not a chatbot waiting for someone to type a prompt. I also required a deterministic data sheet beside each AI-drafted letter so a reviewer could check the facts quickly. If the evidence was missing or conflicting, the workflow had to return `NEEDS REVIEW` and produce no letter.
 
-**Tools.** I used Claude Code as the orchestrator, with coordinated sub-agents. The build uses `databricks-claude-sonnet-4-6` through `ai_query` for appeal generation and for the chat agent.
+I kept four audiences in mind. The VP of Revenue Cycle cares about revenue and filing deadlines. The Director of Denial Management needs a practical work queue. The CFO needs to understand cost, assumptions and payback. The CDAIO needs to see that the design is governed and reusable. I shaped the deck around those questions instead of walking through a list of Databricks products. It starts with the business problem, follows one fictional denial through the workflow, shows what was actually measured and ends with a 90-day pilot request.
 
-**Coordination pattern.** I planned first and approved the plan before any code was written. Then I ran one shared specification, `docs/SPEC.md`, covering interfaces, the hero claim and defaults. Sub-agents wrote to one append-only log, `docs/FINDINGS.md`, which recorded interface changes, blockers and resource IDs. The work split into five tracks: data and SDP, GenAI, Lakebase, the app, and governance with Genie. Each track wrote its evidence as text under `evidence/`.
+The platform design was intentional. The generator and Auto Loader feed Spark Declarative Pipelines; Unity Catalog provides lineage, tags, grants and masks; `ai_query` makes the determination and drafts the supported letter; Lakebase serves the worklist and stores reviewer actions; review state returns to Unity Catalog; Genie exposes the operational metrics; and the Databricks App brings the worklist, case file, chat and analytics together. I used one hero denial through the full flow so I could demonstrate that these were connected parts of one solution.
 
-**Databricks AI Dev Kit skills.** The plan named `databricks-pipelines`, `databricks-jobs`, `databricks-lakebase`, `databricks-genie`, `databricks-apps`, `databricks-unity-catalog`, `databricks-ai-functions` and `databricks-dabs`. The rule was to check current docs before using any feature. [TODO builder: confirm which skills were actually invoked.]
+Before implementation, I approved a shared plan and interface contract in `docs/SPEC.md`. Parallel workstreams used `docs/FINDINGS.md` to record blockers and interface changes, and each track had to produce text evidence. I used Databricks AI Dev Kit guidance for pipelines, jobs, Lakebase, Genie, Apps, Unity Catalog, AI Functions and Asset Bundles. My working rules were straightforward: public references and synthetic data only, leave the earlier prototype untouched, cap generation at 60 appeals per run, fail safely, ask before changing access, and do not put a number in the README or deck unless it traces to evidence.
 
-**Key patterns.**
-- Every number on a slide or in this README traces to a file. A figure that is not in `DECK_NUMBERS.md` or an evidence file does not appear.
-- Measured numbers are labelled "prototype, synthetic data". Projected numbers are labelled as model outputs or assumptions.
-- The hero claim is fixed in the spec, so the generator, the pipeline, the app and the demo all follow one case.
-- Evidence is text, not screenshots.
-- Anything that grants access, shares a resource or changes a shared object needed my approval first. I approved each one explicitly.
-- Added in this pass: the MLflow GenAI evaluation (`genai_evaluate`) and column masks on PHI columns.
+The first outputs were not automatically accepted. I used the application and reported what did not work: the `NEEDS REVIEW` explanation overflowed, the case-file dialog was hard to use, an edited letter did not visibly update, chat returned a 403, Genie had a scope problem and the assistant input still sat below the fold after the first UI fix. I asked for those problems to be corrected and retested. The resulting application has a clearer worklist, a usable case file, letter comparison and download, a full-height assistant panel, working permissions and server-side filters for recommendation and expected value.
 
-**Decisions I made (not delegated to AI).**
-1. Ingest through a generator task, a landing volume and Auto Loader. 500 denials. At most 60 LLM calls per run. Lakebase Autoscaling.
-2. Appeal windows from public regulations (180 / 65 / 60 days), with the caveats recorded.
-3. Public PDFs and spreadsheets only. Not the earlier prototype's curated CSV or parquet.
-4. Personas: VP of Revenue Cycle, CDAIO, CFO and Director of Denial Management. The $12.8M figure is a placeholder to validate, not a result.
-5. Reviewer workspace group, Genie CAN_RUN, app CAN_USE.
-6. The Genie tab runs as the app SP, after the OBO scope failed. Grants on five objects to the SP.
-7. Deck framing: three tiers. Drop the earlier, unsourced upside figure. Show $12.8M as a hypothesis tested and revised.
-8. Headline wording. Chosen by Naveen on 2026-11-25: "$2M–$4M a year of earned revenue recovered at about 50 cents an appeal, paying back the pilot within a quarter, even at the floor." The earlier "20×" wording is retired because it excludes the one-time pilot cost (`docs/business_case/DECK_NUMBERS.md` §7).
+I made the same kinds of calls outside the UI. I chose to anonymize the customer. I approved the required grants and later removed a broad `account users` grant. I asked why the bundle still had hard-coded names and whether it could really deploy from scratch. That led to a parameterized bundle, an isolated smoke target, a successful 12-task clean deployment and teardown, a 12-task live verification run with unchanged counts, and a final no-op plan.
 
-**Session.** The conversation ID is `e2e3204c-874a-4e35-bf06-2aa699e64087`. The build log, including the timeline, decisions and issues hit, is [docs/SESSION_LOG.md](docs/SESSION_LOG.md). [TODO builder: confirm the submission did not use the internal Solution Builder output, which the attestation requires.]
+Testing also changed the build. A laterality problem in the synthetic data was fixed and covered by a regression test. A SQL failure caused by an apostrophe led to a static quote check. A missing Lakebase column was found after the app returned a 503. Grounding was changed to use a content-hash cache. The first LLM-judge run scored groundedness at 83.3% because the judge did not see the same context as the generation model. I required the contexts to match and a drift test to be added; groundedness then measured 98.3%.
+
+I also pushed back on the business case and presentation. I treated the original `$12.8M` opportunity as a hypothesis. The research did not support it as stated, so I did not use it as the result. I chose Floor, Likely and Ceiling scenarios, kept the lower bottom-up cross-check visible, labelled the Likely tier's `2.0×` weighting as an assumption and included the pilot cost in the payback calculation. I rejected an earlier title and asked for the deck to be rebuilt when it looked unpolished and disjointed. The final title, **"Automate the Appeal. Recover the Revenue."**, reflects both the operational and financial value.
+
+The final prototype reports 97.2% accuracy across 180 synthetic appeals, no unsafe calls, 98.3% LLM-judged groundedness, 96.7% no-fabrication performance and 14 of 14 Genie benchmark answers. Measured cost is `$0.11` variable and about `$0.51` fully loaded per appeal at 60 per day. The current code passes 202 Python tests and 73 application tests. These are prototype results on synthetic data, not payer outcomes or realized revenue.
+
+The evidence for how I worked is in [`docs/PROMPT_LOG.md`](docs/PROMPT_LOG.md), [`docs/STEERING_LOG.md`](docs/STEERING_LOG.md) and [`evidence/00_LIFECYCLE.md`](evidence/00_LIFECYCLE.md). The Claude Code session ID is `e2e3204c-874a-4e35-bf06-2aa699e64087`.
+
+I did not use another FE's submission or another person's code for this submission.
 
 ---
 
@@ -285,7 +285,7 @@ Business-case numbers are in `docs/business_case/DECK_NUMBERS.md`.
 - The full 180-row LLM-judge run. The judge scored 60 rows; the 180-row estimate (about $7.2) is above the $5 cap.
 - Chat-agent tracing. `fe-bar-appeals-chat` has tracing enabled, but no traces were found in either experiment (`evidence/14_mlflow_genai_eval.md` §8b).
 - A live nightly schedule. The job is paused.
-- A browser visual test of the app. Checks were API calls and a build.
+- A recorded browser visual test of the app. The evidence holds API calls, the 73 Vitest tests and a build.
 
 **Limits of the numbers**
 - Accuracy is agreement with designed labels on synthetic cases. It is not a payer win rate and not a clinical outcome.
@@ -301,22 +301,33 @@ Business-case numbers are in `docs/business_case/DECK_NUMBERS.md`.
 
 ## Running it
 
-**Prerequisites.** A Unity Catalog workspace with serverless compute, a SQL warehouse, a Vector Search endpoint named `appeals-vs-endpoint`, and Lakebase Autoscaling. Databricks CLI with a profile for the workspace.
+**Prerequisites.** Databricks CLI v1.21 or later with a profile for the workspace, plus `jq`, `psql` and `python3`. The workspace needs Unity Catalog with serverless compute, a SQL warehouse, a Vector Search endpoint named `appeals-vs-endpoint`, and Lakebase Autoscaling. `databricks.yml` hard-codes the build workspace host and warehouse, so change `targets.default.workspace.host` and `variables.warehouse_id` for another workspace. Set `FEBAR_PROFILE` and `FEBAR_WAREHOUSE` if they differ from the defaults.
 
-1. **Point the bundle at your workspace.** `databricks.yml` hard-codes the build workspace host and the warehouse ID. Change `targets.default.workspace.host`, `variables.warehouse_id` and the catalog and schema variables.
-2. **Upload the four public reference files** into the volume `raw_references`. The bootstrap creates the schema and volume, but it reads the files, so the first run fails until they are in place. Run the bootstrap task once to create the volume, upload the files, then re-run the job.
-3. **Lakebase.** `lakebase/setup_lakebase.sh` creates the project, the `appeals` database and the DDL. It is idempotent. Grant the app's SP the statements in `lakebase/app_grants.sql` after the app exists.
-4. **Deploy and run the job.**
-   ```
-   databricks bundle deploy --profile <your-profile>
-   databricks bundle run fe_bar_appeals_job --profile <your-profile>
-   ```
-   Use `--only <task>` to run a single task. The bootstrap task is idempotent and skips the expensive `ai_parse_document` steps once their tables have rows.
-5. **Governance.** `tools/run_sql.py -f governance/01_phi_tags.sql` applies PHI tags. The reviewer grants in `governance/02_reviewer_grants.sql` need an account-level group first.
-6. **Genie Agent.** `python3 genie/build_space.py` writes `genie/genie_space.json`. Create the space from that serialized JSON through the Genie API. `python3 genie/run_benchmarks.py --space <space-id>` runs the 14 benchmarks and writes `evidence/07_genie.md`.
-7. **Chat agent.** `agent/build_and_deploy.py` is a Databricks notebook. It logs the UC model `appeals_chat_agent` and deploys the endpoint `fe-bar-appeals-chat`.
-8. **App.** `app/` is an AppKit project. Create `fe-bar-appeals-app`, bind its resources (warehouse, the PDF volume, the Lakebase database, the chat endpoint and the Genie space), and deploy. The deploy steps and the resource list are in `evidence/06_app.md`.
-9. **Tests.** `python3 -m pytest generator/tests` and `python3 -m pytest genai/` run the generator and parser tests. In `app/`, `npm run test` runs the Vitest suite.
+**Deploy from a clean checkout.** One runbook covers the whole build:
+
+```
+scripts/deploy_all.sh --dry-run          # print every step, run nothing
+scripts/deploy_all.sh                    # validate, deploy, then the idempotent setup steps in order
+scripts/deploy_all.sh -t smoke --dry-run # the smoke target (see Targets below)
+```
+
+The runbook runs, in order: `bundle validate` and `bundle deploy`; the Lakebase project and DDL (`lakebase/setup_lakebase.sh`); one full job run (this creates the tables the later steps read); the Lakebase synced table (`lakebase/create_synced_table.sh`) and the review view; governance `01` and `05`; the Genie metric view (`genie/00`, `genie/01`) and a redeploy; the chat agent (`agent/build_and_deploy.py` as a one-time serverless run); the app (workspace import, `apps update` with the full definition in `app/app_resources.json`, `apps deploy`); governance `04`; and a final `bundle plan`. `governance/02_reviewer_grants.sql` is not run because it needs an account-level group.
+
+**Targets and variables.** `databricks.yml` parameterizes the names (`name_prefix`, `lakebase_project`, `lakebase_catalog`, `vs_endpoint`, `chat_model`, `max_appeals`, `enable_lakebase_sync`, the dashboard and Genie titles and the JSON file paths), so defaults reproduce the live names exactly. Two targets:
+- `default`: the live build, with no prefix. It deploys every resource. The Lakebase, chat endpoint, registered model and VS index are declared in `targets/default/*.yml` (under `targets.default.resources`), so they do not exist in the smoke target.
+- `smoke`: schema `fe_bar_appeals_test`, names `fe-bar-appeals-smoke-*`, `max_appeals` 5, `enable_lakebase_sync` false, its own `root_path`. It deploys only the schema, volumes, SDP pipeline, job, dashboard and Genie space. Deploy it with `databricks bundle deploy -t smoke`; `bundle plan -t smoke` shows eight creates.
+
+The dashboard and Genie exports hard-code the source catalog and schema, and bundle variables are not substituted inside JSON. `scripts/render_configs.py --catalog C --schema S --out build/<target>/` rewrites them (dataset `catalog`/`schema` keys and dotted `catalog.schema` references). With the source names the output is byte-identical to the source, which the default target uses directly. `build/` is git-ignored and is regenerated by the runbook (step 1) before each validate or deploy. To validate or plan smoke by hand, run `scripts/render_configs.py --catalog appeals_hackathon_catalog --schema fe_bar_appeals_test --out build/smoke` first.
+
+**What the bundle owns.** `bundle plan` reports no changes on these: the job and the SDP pipeline (including the `cost_views` task), the dashboard "Appeals Automation Agent Insights", the Genie space, the schema and the three volumes, the Lakebase project, branch, endpoint, `appeals` database, UC catalog and synced table, the registered chat model, the VS index, and the chat endpoint. The app is not in the bundle. Its own definition is `app/databricks.yml`, and `app/app_resources.json` is what the runbook applies. Roles, grants and the Lakebase owner role are also outside the bundle. Full inventory and plan output: `evidence/16_bundle_deploy.md`.
+
+**Things to know.**
+- The job is PAUSED on its schedule, so the runbook's step 3 is the only run. Run it on the morning of a demo, because NEW tags and days-remaining are date-relative.
+- On a brand-new workspace the first `bundle deploy` can fail on the chat endpoint until agent version 2 is registered. The runbook warns and continues, and the second deploy (after the agent step) creates the endpoint.
+- To run one task: `databricks bundle run fe_bar_appeals_job --only <task>`. Use `+` to include upstream tasks.
+- `genie/build_space.py` and `genie/genie_space.json` are superseded by the exported space in `genie/appeals_metrics.geniespace.json`, which the bundle owns.
+
+**Tests.** `python3 -m pytest generator/tests genai/` runs the generator, parser, evaluation and parameterization tests (202 Python tests). In `app/`, `npm run test` runs the Vitest suite (73 app tests).
 
 A clean data-layer rerun was done on 2026-11-25: landing volume, PDFs and job-owned tables were reset and regenerated; schema, grants and resources were kept. The full refresh and the three job runs are in `evidence/01_lakeflow_pipeline.md` and `evidence/08_job_run.md`. The rerun itself changed no code and no grants. The code-review fixes and the app redeploy landed before it.
 
@@ -325,14 +336,20 @@ A clean data-layer rerun was done on 2026-11-25: landing volume, PDFs and job-ow
 ## Repo layout
 
 ```
-databricks.yml, resources/      bundle, Lakeflow job (fe_bar_appeals.job.yml) and SDP pipeline
+databricks.yml, resources/      bundle: variables, targets, job, SDP pipeline, dashboard, Genie space, schema, volumes
+targets/default/                default-target-only resources: Lakebase, chat endpoint, model, VS index
+                                (see the 'What the bundle owns' list)
+scripts/deploy_all.sh           the runbook (-t default|smoke; validate, deploy, setup steps in order; --dry-run)
+scripts/render_configs.py       renders the dashboard and Genie JSON into build/<target>/ (catalog.schema rewrite)
+dashboards/                     Lakeview dashboard JSON and cost_views.sql (cost views, run as a job task)
 generator/                      seeded synthetic generator, writer, unit tests
 sdp/                            Lakeflow SDP source: bronze, silver, gold, reference MVs
 pipeline/                       job tasks: bootstrap, raw data, grounding, data sheet, generation,
                                 PDFs, Lakebase sync, evaluation
 genai/                          output parser and its tests
 agent/                          chat agent (LangGraph ResponsesAgent) build and deploy
-lakebase/                       setup script, DDL, grants, synced-table helper, auth notes
+lakebase/                       setup script, DDL, grants, synced-table helper, auth notes,
+                                APP_GRANTS.md (current grant and binding status)
 governance/                     PHI tags, reviewer grants, lineage query, app SP grants
 genie/                          metric view, Genie space builder, benchmarks and runner
 app/                            Databricks App (AppKit): server, client, tests
@@ -340,6 +357,6 @@ tools/                          run_sql.py helper (parameterised SQL)
 data/SOURCES.md                 public references and appeal-window sources
 docs/                           SPEC, FINDINGS, STAKEHOLDERS, CUSTOMER_CONTEXT, SESSION_LOG,
                                 business_case/ (model, sources, cost checkpoints, DECK_NUMBERS),
-                                deck/DECK.md (text version of the deck)
+                                deck/ (DECK.md text map, deck PDF, architecture slide spec)
 evidence/                       execution evidence as text, indexed in evidence/EVIDENCE.md
 ```

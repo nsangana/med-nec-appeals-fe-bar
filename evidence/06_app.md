@@ -1,39 +1,38 @@
-# 06 — Databricks App: fe-bar-appeals-app (Agent E)
+# 06 — Databricks App: fe-bar-appeals-app
 
-> **Note (2026-11-25).** The app was redeployed after the clean data-layer rerun (deployment `01f1e91de0e21f58818a94fcc05b5319`, app id `059b0419-b956-41e1-a788-e5104b645dc9`). The API responses below are from 2026-11-24 and show the earlier counts (for example 70 WARRANTED). Re-check the worklist and summary routes before quoting app numbers. The current counts are in evidence/03_lakebase.md (73 / 64 / 43).
+Workspace `fevm-appeals-hackathon`. Captured 2026-11-26 (UTC) from the deployed app's own API routes (real Lakebase and UC data, not simulated). Source of truth for the code: `app/`.
 
-Workspace `fevm-appeals-hackathon`. Captured 2026-11-24 (UTC). Source of truth for the code: `app/`.
-Evidence is from the deployed app's own API routes (real Lakebase and UC data), not simulated.
+History: earlier runs are in git history.
 
 ## Deployment
+
 | Item | Value |
 |---|---|
 | App | `fe-bar-appeals-app` (id `059b0419-b956-41e1-a788-e5104b645dc9`) |
 | URL | https://fe-bar-appeals-app-7474656043998914.aws.databricksapps.com |
 | State | app RUNNING, compute ACTIVE |
-| Active deployment | `01f1e7eefc82159aac9ffabb03077418` SUCCEEDED ("App started successfully") |
-| Earlier deployments | `01f1e7ed83d914e9a793520872e506aa` (first), `01f1e7ee02b3124bb39f3e1c5d143f1e` (fallback), `01f1e7ee916d185aaa2a3c6c07eec0fe` (pre UI fix) — all SUCCEEDED |
+| Active deployment | `01f1e96376b9168e824d4acf7801c9bf` SUCCEEDED ("App started successfully"), checked 2026-11-26 |
 | Source path | `/Workspace/Users/<builder>/fe-bar-appeals-app` (uploaded with `workspace import-dir`; excludes node_modules, dist, .env) |
 | Service principal (client id) | `059b0419-b956-41e1-a788-e5104b645dc9` |
-| User API scopes | `sql`, `model-serving`, `files` (OBO) |
+| User API scopes | `files`, `genie`, `iam.access-control:read`, `iam.current-user:read`, `model-serving`, `sql` (OBO) |
 
-Created with `databricks apps create --json` (no compute), started with `apps start`, deployed with `apps deploy --source-code-path`.
-`databricks apps create-update` for later resource changes (not needed yet). Bundle deploy not used.
+Created with `databricks apps create --json` (no compute), started with `apps start`, deployed with `apps deploy --source-code-path`. Later resource and scope changes used `databricks apps create-update`. Bundle deploy not used.
 
 ## Resource bindings
+
 | Resource | Target | Permission | Status |
 |---|---|---|---|
 | `sql-warehouse` | `559faf81d610a2a1` | CAN_USE | bound |
 | `files` (volume) | `appeals_hackathon_catalog.fe_bar_appeals.appeal_pdfs` | READ_VOLUME | bound |
 | `postgres` | `projects/fe-bar-appeals-lakebase/branches/production/databases/appeals` | CAN_CONNECT_AND_CREATE | bound; `LAKEBASE_ENDPOINT` from it |
-| `serving-endpoint` | `fe-bar-appeals-chat` | CAN_QUERY | NOT bound: endpoint does not exist yet (app.yaml uses a literal name) |
-| `genie-space` | `01f1e7ec913217158b231c3e2f18fa20` ("FE Bar – Medical Necessity Appeals") | CAN_RUN | bound 2026-11-24 by orchestrator (`apps create-update`, update SUCCEEDED); `DATABRICKS_GENIE_SPACE_ID` valueFrom genie-space; scope `dashboards.genie` added; deployment `01f1e7f10d78100c92bcc5b9220fa35d` SUCCEEDED; Genie space ACL shows app SP CAN_RUN |
+| `serving-endpoint` | `fe-bar-appeals-chat` | CAN_QUERY | bound; `DATABRICKS_SERVING_ENDPOINT_NAME` valueFrom serving-endpoint |
+| `genie-space` | `01f1e7ec913217158b231c3e2f18fa20` ("FE Bar – Medical Necessity Appeals") | CAN_RUN | bound; `DATABRICKS_GENIE_SPACE_ID` valueFrom genie-space |
 
 Nothing points at `appeals_agent`, `appeals-chat-agent-endpoint`, or `<prior-prototype app>`:
-`grep -rn "appeals_agent\|appeals-chat-agent-endpoint\|<prior-prototype app>" app/ --exclude-dir=node_modules` returns only the test
-assertion that checks they are absent (`server/worklist.test.ts`).
+`grep -rn "appeals_agent\|appeals-chat-agent-endpoint\|<prior-prototype app>" app/ --exclude-dir=node_modules` returns only the test assertion that checks they are absent (`server/worklist.test.ts`).
 
-## Startup log (healthy start, deployment 01f1e7eefc82…)
+## Startup log (healthy start, first deployment `01f1e7eefc82…`)
+
 ```
 [APP] ./.env not found. Continuing without it.   (deployed copy has no .env; env comes from app.yaml + resources)
 [APP] [appkit:lakebase] Lakebase SP pool initialized
@@ -42,112 +41,107 @@ assertion that checks they are absent (`server/worklist.test.ts`).
 [APP] [appkit:server] Mode: production (static)
 [BUILD] [INFO] Deployment successful
 ```
-Errors in the log while serving: none from Postgres or UC (no 42501). Two expected lines: a `Plugin execution failed` and
-`appeals-chat upstream error: ... endpoint does not exist` at chat time (see chat below). A
-`App did not respect SIGTERM timeout` line came from the previous instance during a redeploy.
 
-## Captured app API responses (caller = Naveen's CLI user token as bearer; this is the platform-proxied route)
+Errors while serving: none from Postgres or UC (no 42501). A `App did not respect SIGTERM timeout` line came from the previous instance during a redeploy.
 
-### (a) Worklist, top 5 (`GET /api/worklist?page_size=5`, default sort = NEW first, then priority_rank)
-Total 500 encounters. NEW = 20, AT_RISK = 75 (summary route).
+## Captured app API responses (2026-11-26, bearer = CLI user token, platform-proxied route)
+
+### (a) Worklist summary and top 5
+
+`GET /api/worklist/summary`:
+
+| total | new | at_risk | warranted | not_warranted | needs_review | not_generated | warranted_expected |
+|---|---|---|---|---|---|---|---|
+| 500 | 0 | 67 | 72 | 66 | 42 | 320 | $895,235.64 |
+
+`GET /api/worklist?page_size=5` (default sort: NEW first, then priority_rank; NEW is empty on this run date):
+
 | rank | tag | account | patient | denial | payer | days left | expected $ | recommendation | review |
 |---|---|---|---|---|---|---|---|---|---|
-| 77 | NEW | 770000064 | Leonard Lindqvist | CO50 | Aetna | 179 | 15,435.33 | NOT WARRANTED | Not started |
-| 93 | NEW | 770000056 | Victor Whitcombe | CO50 | BCBS of Arizona Medicare Advantage | 64 | 13,545.98 | WARRANTED | Not started |
-| 109 | NEW | 770000143 | Lucia Tadesse | CO50 | Cigna | 179 | 12,226.33 | NOT WARRANTED | Not started |
-| 125 | NEW | 770000462 | Helen Abernathy | CO55 | Aetna | 179 | 8,989.80 | NEEDS REVIEW | Not started |
-| 139 | NEW | 770000005 | Carmen Fairbanks | CO55 | Cigna | 179 | 8,265.84 | NOT WARRANTED | Not started |
+| 1 | AT_RISK | 770000001 | Elena Marquez | CO50 | BCBS of Arizona | 8 | 24,850.00 | WARRANTED | SUBMIT (simulated) |
+| 2 | AT_RISK | 770000203 | Carmen Gallagher | CO50 | Aetna | 1 | 20,096.92 | WARRANTED | ROUTE_TO_REVIEW |
+| 3 | AT_RISK | 770000394 | Leonard Marquez | CO50 | BCBS of Arizona Medicare Advantage | 0 | 18,585.01 | NEEDS REVIEW | EDIT |
+| 4 | AT_RISK | 770000231 | Gerald Quintero | CO50 | Humana Medicare Advantage | 10 | 18,438.19 | NOT WARRANTED | not started |
+| 5 | AT_RISK | 770000233 | Alma Ostrowski | CO50 | Aetna | 4 | 17,437.31 | WARRANTED | APPROVE |
 
-The hero (770000001, rank 1, AT_RISK, 9 days) is not in the top 5 by design: NEW items sort first.
-`GET /api/worklist/summary`: total 500, new 20, at_risk 75, warranted 23, not_warranted 22, needs_review 15, warranted expected $336,319.43.
+The hero (770000001, rank 1, AT_RISK, 8 days on 2026-11-26; 9 on the 2026-11-25 run) is first by priority score. The review column is the simulated reviewer state.
 
 ### (b) Review-action round trip on the hero claim (101 / 770000001 / 50000001)
+
 `POST /api/review-actions` `{"facility_id":"101","account":"770000001","encounter_nbr":"50000001","action":"ROUTE_TO_REVIEW","note":"E2E round trip from fe-bar-appeals-app build (hero claim)"}`
 → HTTP 201
+
 ```json
 {"ok":true,"action_id":"5","action":"ROUTE_TO_REVIEW","reviewer":"<builder email>",
  "created_at":"2026-11-24 10:00:14.539825+00","status":"ROUTE_TO_REVIEW","status_label":"Routed to review",
  "submitted_at":"2026-11-24 09:14:31.159563+00"}
 ```
+
 - Reviewer identity came from the `x-forwarded-email` request header (the platform sets it), so it is not sent in the body.
 - The row is an append-only INSERT into `public.review_actions` by the app SP; the status is read back from `public.review_state`.
 - Validation check: `{"action":"EDIT"}` without `edited_letter` → HTTP 400 (`EDIT requires edited_letter`).
-- This is a real test event in production demo data. The hero now shows "Routed to review" (append-only, cannot be deleted by the app). `submitted_at` 09:14 is from C's earlier test rows (SUBMIT).
+- This is a real test event in the demo data (append-only, cannot be deleted by the app). The hero shows "Routed to review" in this event; the current hero status in the worklist is SUBMIT (see (a)).
 
 Hero history from `GET /api/cases/101/770000001/50000001` (`review.history`): ids 5 (ROUTE_TO_REVIEW, E2E), 2 (SUBMIT, simulated), 1 (APPROVE, simulated).
 
 ### (c) Case-file file paths
-`GET /api/cases/101/770000001/50000001` (HTTP 200, 2,122 B) → `files`:
-| doc | file name | route | HTTP check |
+
+`GET /api/cases/101/770000001/50000001` (HTTP 200) → `files`:
+
+| doc | file name | route | HTTP check (2026-11-26) |
 |---|---|---|---|
-| Appeal letter | `101_770000001_50000001_letter.pdf` | `/api/files/files/raw?path=101_770000001_50000001_letter.pdf` | 200, `application/pdf`, 6,957 B, 1 page |
-| Data sheet (deterministic) | `101_770000001_50000001_datasheet.pdf` | `/api/files/files/raw?path=101_770000001_50000001_datasheet.pdf` | 200, 11,156 B |
-| AI reasoning worksheet | `101_770000001_50000001_cheatsheet.pdf` | `/api/files/files/raw?path=101_770000001_50000001_cheatsheet.pdf` | 200, 12,108 B |
+| Appeal letter | `101_770000001_50000001_letter.pdf` | `/api/files/files/raw?path=101_770000001_50000001_letter.pdf` | 200, `application/pdf`, 6,938 B |
+| Data sheet (deterministic) | `101_770000001_50000001_datasheet.pdf` | `/api/files/files/raw?path=101_770000001_50000001_datasheet.pdf` | 200, `application/pdf`, 11,157 B |
+| AI reasoning worksheet | `101_770000001_50000001_cheatsheet.pdf` | `/api/files/files/raw?path=101_770000001_50000001_cheatsheet.pdf` | 200, `application/pdf`, 12,172 B |
 
-Those 200s were served through the OBO files plugin using my CLI user token (I hold READ_VOLUME as owner).
+Those 200s were served through the OBO files plugin using the CLI user token (the user holds READ_VOLUME as owner).
 
-Case 770000462 (`GET /api/cases/103/770000462/50000462`, 200, 4,104 B): NEEDS REVIEW, no letter (letter is null by design), data sheet and worksheet present.
-Its `needs_review_reason` is 2,874 characters with 8 bullets. The worklist cell shows the one-line summary (see the UI fix below).
+Case 770000462 (`GET /api/cases/103/770000462/50000462`, HTTP 200, 4,892 B): NEEDS REVIEW, no letter (letter is null by design), data sheet (10,329 B) and worksheet (12,219 B) present. Its `needs_review_reason` is 3,667 characters with 9 bullets. The worklist cell shows a one-line summary (see the UI section below).
 
-## UI fix: long NEEDS REVIEW reason (reported by Naveen, 770000462)
+## UI: long NEEDS REVIEW reason
+
 - Worklist cell: `summarizeReason()` gives one line, clamped to 2 lines with `break-words`; the full text is in the hover `title`.
-  Actual output for 770000462: `8 open items · FDA device approval/clearance pathway undocumented` (65 characters).
-- Case file: `ReasonList` shows all 8 items as a bulleted list (title in bold, text nodes only, no HTML from the model), in a `max-h-40 overflow-y-auto` box.
-- Other long LLM text: the letter and the AI worksheet (`appeal_letter` ~6.6k chars max, `cheat_sheet` ~11.7k chars max) appear only in
-  the Text tab inside a scrollable `pre` (`max-h 60vh`). They are not shown inline in the table.
-- Verified through the API payload (reason length 2,874; 8 items) and the parser unit tests (22 passing). Visual check: NOT done (see below).
+- Case file: `ReasonList` shows every item as a bulleted list (title in bold, text nodes only, no HTML from the model), in a `max-h-40 overflow-y-auto` box.
+- Other long LLM text: the letter and the AI worksheet appear only in the Text tab inside a scrollable `pre` (`max-h 60vh`). They are not shown inline in the table.
+- Verified through the API payload (770000462: reason 3,667 characters, 9 items) and the reason-parser unit tests (in the 73 app tests). Visual check: NOT done (see below).
 
 ## Chat (`POST /api/appeals-chat`)
-HTTP 502 `{"error":"Agent endpoint error (404): The given endpoint does not exist ..."}`.
-Expected until `fe-bar-appeals-chat` exists. The route surfaces the upstream failure (it used to return an empty answer; fixed).
+
+The serving endpoint `fe-bar-appeals-chat` is bound and READY. The hero-claim invocation and its trace status are in `evidence/09_chatbot.md`.
 
 ## Genie
-Not wired. Set `DATABRICKS_GENIE_SPACE_ID` and add the `genie-space` resource to enable it (`app/README.md` "Genie wiring").
 
-## Tests and build (local)
-- `npm run typecheck` (server + client): clean. `npm run lint`: clean (0 errors, 0 warnings). `npm run build`: clean.
-- `npx vitest run`: 22 tests pass (`server/worklist.test.ts` 17: SQL parameters, ORDER BY whitelist, review-action validation, row mapping, PDF URLs; `client/src/lib/reason.test.ts` 5: reason parsing).
+Runs as the app service principal. The `genie-space` resource is bound with CAN_RUN; the app SP has SELECT on the five space objects and USE CATALOG/SCHEMA (`governance/04_app_sp_genie_grants.sql`).
 
-## Not verified / limits
-- Browser UI: NOT verified. The app URL needs an interactive SSO session. I could not drive the app in a browser as Naveen, so I did not screenshot it.
-  Every check above is an API call with a bearer token, plus the build. Look at the worklist and case file once in a browser.
-- Grants: the orchestrator applied `lakebase/app_grants.sql` (verified by the 201 above). Reviewer-level UC grants (OBO) are pending, see `lakebase/APP_GRANTS_PENDING.md`.
-- Chat endpoint and Genie space resources: pending (endpoint does not exist yet; Genie space not created).
+Decision: the forwarded user token did not carry the `genie` scope after scope update, redeploy and a fresh session, so the Genie tab runs as the app SP. `server/server.ts` subclasses the AppKit Genie plugin (same routes, SSE and `<GenieChat>` contract, no `asUser` wrapper). Trade-off: Genie answers in the app reflect the app's access, not per-reviewer grants. Worklist and review actions already run as the SP; PDFs and chat stay OBO.
 
+## Tests and build (local, 2026-11-26)
 
-## Fix log (orchestrator, 2026-11-24)
-- Genie tab returned `Forbidden: Invalid scope, required scopes: genie`. Added user API scope `genie` (kept `dashboards.genie`) via `apps create-update` (SUCCEEDED). Effective scopes: dashboards.genie, files, genie, iam.access-control:read, iam.current-user:read, model-serving, sql. Users must reload/re-consent so their forwarded token carries the new scope.
-- Chat returned 403 (app SP had no CAN_QUERY): bound `serving-endpoint` resource fe-bar-appeals-chat CAN_QUERY; app.yaml `DATABRICKS_SERVING_ENDPOINT_NAME` valueFrom serving-endpoint; redeployed.
-- Follow-up: still Forbidden after adding `genie`, because "Apps that are already running continue to run with their existing scopes" (Databricks Apps auth docs). Removed deprecated `dashboards.genie`, kept `genie`, redeployed (deployment `01f1e7f715241614b4c14e7c694b059e` SUCCEEDED). Effective scopes: files, genie, iam.access-control:read, iam.current-user:read, model-serving, sql.
-- Genie auth decision (Naveen, 2026-11-24): the forwarded user token still lacked `genie` after scope update + redeploy + fresh session, so the Genie tab now runs as the **app service principal**. `server/server.ts` subclasses the AppKit Genie plugin (same routes/SSE/<GenieChat> contract, no `asUser` wrapper). SP grants: SELECT on the 5 space objects + USE CATALOG/SCHEMA (`governance/04_app_sp_genie_grants.sql`, verified with SHOW GRANTS); CAN_RUN on the space via the genie-space resource. Typecheck/lint/22 tests/build pass; deployment `01f1e7fb1d38144b9945d132b923a60e` SUCCEEDED. Trade-off: Genie answers in the app reflect the app's access, not per-reviewer grants; worklist/review actions already run as the SP; PDFs + chat stay OBO.
+- `npm run typecheck` (server + client) and `npm run lint`: clean (re-run 2026-11-26).
+- `npx vitest run` in `app/`: **73 passed** (5 test files, re-run 2026-11-26).
 
 ## UX update 2026-11-26
 
 **Letter editing is visible in the case file.** When a saved edit exists, the Letter tab shows the edited letter as a formatted preview by default, with a version chip ("Version N · edited by <reviewer> · <relative time>") and a toggle between "Original AI draft (PDF)" and "Edited letter". With no edit, the AI draft PDF shows as before.
+
 - **Preview:** markdown is parsed into plain blocks and rendered as React text nodes. No `dangerouslySetInnerHTML`, no HTML parsing, links keep their text only. Letter typography, a letterhead placeholder, and an RE block.
 - **Show changes:** word-level inline diff of the AI draft against the latest edit (dependency-free LCS), with added and removed words highlighted and a word count.
 - **Download final letter (PDF):** print-to-PDF of a body-level copy of the edited letter (no server write, no new permission). File name `<account>_<encounter>_letter_v<N>.pdf` (set as the document title for the print).
 - **Save edit** shows the new version immediately (optimistic), then re-reads the case. Approve and Submit say which version they apply to ("Approve version N", or "Approve AI draft" with no edit).
 - Data sheet and AI worksheet tabs are unchanged.
 
-**Agent and Genie panel.** The right-hand panel is sticky and viewport-height (`lg:sticky lg:top-6 lg:h-[calc(100vh-3rem)]`). The message list scrolls, the composer is pinned at the bottom, and the Genie tab's `<GenieChat>` fills the same column via `className`.
+**Agent and Genie panel.** The right-hand panel is a sticky, viewport-height sidebar (`lg:sticky lg:top-6 lg:h-[calc(100vh-3rem)]`). The message list scrolls, the composer is pinned at the bottom, and the Genie tab's `<GenieChat>` fills the same column via `className`. Single instance below lg.
 
 **Server (read-only).** The latest-edit query returns `version`, a count of EDIT events for the same case. No Lakebase schema change, no new writes.
 
-**Tests.** `npm run typecheck`, `npm run lint`, `npm test` (54 passed; new tests for the parser, the version copy, the file name, the diff, and the version count), and `npm run build` all pass.
-
-**Deployment.** `01f1e9619d1b15709b260144b944edbb`, SUCCEEDED, app RUNNING. Logs show the server listening and no runtime errors. Files uploaded: `client/src/{App.tsx,index.css,components/{CaseFileDialog,ChatPane,LetterTab,LetterViews}.tsx,lib/{api,letterPreview,letterPreview.test,letterDiff,letterDiff.test}.ts}`, `server/{worklist,worklist.test}.ts`. No new dependencies.
-
-**Visual verification.** Not done. The app URL redirects to the Databricks SSO login, and the browser session was not signed in. Layout at 1440x900 has not been checked by eye.
+**Worklist filters.** Recommendation filter chips with counts, a ">= $10K expected" toggle, and an "Expected $ (high -> low)" sort. Server-side bound parameters (recommendation, min_expected) so filters span all 500 rows. Verified against Lakebase Postgres with the real SQL: total 500 = WARRANTED 72 + NOT WARRANTED 66 + NEEDS REVIEW 42 + NOT GENERATED 320; >= $10K = 107 (WARRANTED 42); expected_desc puts the hero claim ($24,850) first.
 
 **Known limits.**
 - Diffs above ~6M table cells show the middle as one replacement, so the word count is coarse for very large rewrites.
 - The Approve/Submit actions do not record the version they applied to. That would need a schema change, which was out of scope.
 - Print file name depends on the browser using the document title for its default PDF name (Chrome and Safari do).
 
+## Not verified / limits
 
-## Worklist filters + sidebar layout (2026-11-26)
-- Assistant/Genie panel is a full-height sidebar pinned to the viewport (question box always visible); single instance below lg.
-- Recommendation filter chips with counts, ">= $10K expected" toggle, "Expected $ (high -> low)" sort; server-side bound params (recommendation, min_expected) so filters span all 500 rows.
-- Verified against Lakebase Postgres with the real SQL: total 500 = WARRANTED 72 + NOT WARRANTED 66 + NEEDS REVIEW 42 + NOT GENERATED 320; >= $10K = 107 (WARRANTED 42); expected_desc puts the hero claim ($24,850) first.
-- 73 tests pass; deployments 01f1e962… (layout) and 01f1e963… (filters) SUCCEEDED.
+- Browser UI: NOT verified. The app URL needs an interactive SSO session, so no screenshot was taken and the layout at 1440x900 has not been checked by eye. Every check above is an API call with a bearer token, plus the local tests and build. Look at the worklist and case file once in a browser.
+- Reviewer-level UC grants (OBO) are pending, see `lakebase/APP_GRANTS.md` (current grant state; reviewer UC grants need an account-level group).

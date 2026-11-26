@@ -5,18 +5,55 @@
 # MAGIC 2. Trigger a refresh of the Lakebase synced table `fe_bar_appeals_lakebase.fe_bar_appeals.worklist_serving`.
 # MAGIC 3. Copy Lakebase `review_state` into Delta `review_state_uc` (reviewer state back to UC for Genie).
 # MAGIC
+# MAGIC Job parameters (notebook widgets): `catalog`, `schema` (validated plain identifiers) and
+# MAGIC `enable_lakebase_sync` ("true" | "false").
+# MAGIC - `true` (default, live behaviour): steps 1-3 run.
+# MAGIC - `false`: step 1 still runs (MERGE into the Delta table `worklist_serving`, no Lakebase dependency);
+# MAGIC   the synced-table refresh (step 2) and the Lakebase review_state copy (step 3) are SKIPPED with a printed
+# MAGIC   message. `review_state_uc` keeps its last copied content. Use this to run the pipeline without Lakebase
+# MAGIC   compute, for example the smoke target.
+# MAGIC
 # MAGIC Idempotent: safe to re-run. Synthetic data only. Job task on serverless compute.
 
 # COMMAND ----------
+import re
 
-CAT = "appeals_hackathon_catalog"
-SCH = "fe_bar_appeals"
+
+def _param(name, default):
+    """Job base_parameters / widgets with a local default for interactive runs."""
+    try:
+        dbutils.widgets.text(name, default)  # noqa: F821 (provided by the Databricks runtime)
+        return dbutils.widgets.get(name)  # noqa: F821
+    except NameError:
+        return default
+
+
+CATALOG_DEFAULT = "appeals_hackathon_catalog"  # live value; the job passes the bundle target's catalog
+SCHEMA_DEFAULT = "fe_bar_appeals"  # live value; the job passes the bundle target's schema
+CAT = _param("catalog", CATALOG_DEFAULT).strip()
+SCH = _param("schema", SCHEMA_DEFAULT).strip()
+for _name, _val in (("catalog", CAT), ("schema", SCH)):
+    # Object names are built from these two values only: plain identifiers, nothing user-supplied in SQL text.
+    if not re.fullmatch(r"[A-Za-z0-9_]+", _val):
+        raise ValueError(f"{_name} must be a plain identifier, got {_val!r}")
+
+ENABLE_LAKEBASE_SYNC_RAW = _param("enable_lakebase_sync", "true").strip().lower()
+if ENABLE_LAKEBASE_SYNC_RAW not in ("true", "false"):
+    raise ValueError(f"enable_lakebase_sync must be 'true' or 'false', got {ENABLE_LAKEBASE_SYNC_RAW!r}")
+ENABLE_LAKEBASE_SYNC = ENABLE_LAKEBASE_SYNC_RAW == "true"
+print(f"enable_lakebase_sync={ENABLE_LAKEBASE_SYNC}")
+
+# Lakebase UC catalog (the registered catalog of the Lakebase project). Not a per-build catalog, so not a parameter.
+# The synced table and the review_state table live under it in schema SCH, so SCH must match the synced table's schema
+# whenever enable_lakebase_sync is true.
+LAKEBASE_CATALOG = "fe_bar_appeals_lakebase"
+
 GOLD = f"{CAT}.{SCH}.gold_denial_worklist"
 APPEALS = f"{CAT}.{SCH}.appeals_output"
 DATA_SHEET = f"{CAT}.{SCH}.data_sheet_facts"  # deterministic data sheet (no LLM); one row per grounded encounter
 SERVING = f"{CAT}.{SCH}.worklist_serving"
-SYNCED_NAME = f"fe_bar_appeals_lakebase.{SCH}.worklist_serving"  # UC name of the synced table (Lakebase catalog)
-REVIEW_STATE_LB = "fe_bar_appeals_lakebase.public.review_state"
+SYNCED_NAME = f"{LAKEBASE_CATALOG}.{SCH}.worklist_serving"  # UC name of the synced table (Lakebase catalog)
+REVIEW_STATE_LB = f"{LAKEBASE_CATALOG}.public.review_state"
 REVIEW_STATE_UC = f"{CAT}.{SCH}.review_state_uc"
 KEYS = ["FACILITY_ID", "PATIENT_CONTROL_NUMBER", "ENCOUNTER_NBR"]
 
@@ -51,8 +88,8 @@ for k in KEYS:
     spark.sql(f"ALTER TABLE {SERVING} ALTER COLUMN {k} SET NOT NULL")
 pk_exists = spark.sql(f"""
 SELECT 1 FROM {CAT}.information_schema.table_constraints
-WHERE table_schema = '{SCH}' AND table_name = 'worklist_serving' AND constraint_type = 'PRIMARY KEY'
-""").count() > 0
+WHERE table_schema = :schema_name AND table_name = 'worklist_serving' AND constraint_type = 'PRIMARY KEY'
+""", args={"schema_name": SCH}).count() > 0
 if not pk_exists:
     spark.sql(f"ALTER TABLE {SERVING} ADD CONSTRAINT worklist_serving_pk PRIMARY KEY ({', '.join(KEYS)})")
 
@@ -93,14 +130,31 @@ def trigger_synced_refresh(timeout_s=1800):
         time.sleep(15)
     raise TimeoutError(f"synced table refresh {update_id} still running after {timeout_s}s")
 
-trigger_synced_refresh()
+if ENABLE_LAKEBASE_SYNC:
+    trigger_synced_refresh()
+else:
+    print("enable_lakebase_sync=false: SKIPPED the synced-table refresh (Lakebase). worklist_serving was still merged.")
 
 # COMMAND ----------
 
 # 3. Copy Lakebase review_state into Delta (reviewer state back to UC). Runs via the registered UC catalog.
-spark.sql(f"""
-CREATE OR REPLACE TABLE {REVIEW_STATE_UC}
-COMMENT 'SIMULATED reviewer state copied from Lakebase review_state (fe_bar_appeals_lakebase)'
-AS SELECT *, current_timestamp() AS copied_at FROM {REVIEW_STATE_LB}
-""")
-print(f"review_state_uc rows: {spark.table(REVIEW_STATE_UC).count()}")
+if ENABLE_LAKEBASE_SYNC:
+    spark.sql(f"""
+    CREATE OR REPLACE TABLE {REVIEW_STATE_UC}
+    COMMENT 'SIMULATED reviewer state copied from Lakebase review_state ({LAKEBASE_CATALOG})'
+    AS SELECT *, current_timestamp() AS copied_at FROM {REVIEW_STATE_LB}
+    """)
+    print(f"review_state_uc rows: {spark.table(REVIEW_STATE_UC).count()}")
+else:
+    # Flag off: no copy, but the metric view and the Genie space read review_state_uc, so it must exist.
+    # IF NOT EXISTS creates an EMPTY placeholder with the same columns only when the table is missing; an existing
+    # table (live) is left as it was.
+    spark.sql(f"""
+    CREATE TABLE IF NOT EXISTS {REVIEW_STATE_UC} (
+      facility_id BIGINT, patient_control_number BIGINT, encounter_nbr BIGINT, status STRING,
+      last_reviewer STRING, last_action_at TIMESTAMP, submitted_at TIMESTAMP, deadline_met BOOLEAN,
+      copied_at TIMESTAMP
+    ) COMMENT 'Reviewer state copied from Lakebase. EMPTY placeholder when enable_lakebase_sync=false.'
+    """)
+    print("enable_lakebase_sync=false: SKIPPED the Lakebase review_state copy. review_state_uc left as it was "
+          "(created empty if missing).")

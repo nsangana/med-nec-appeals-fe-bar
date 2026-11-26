@@ -1,0 +1,1872 @@
+{
+  "datasets": [
+    {
+      "name": "ds_daily",
+      "displayName": "Cost by day and component",
+      "queryLines": [
+        "SELECT usage_date, component, resource, product, sku, attribution, cost_type, run_ref, dbu, list_usd\n",
+        "FROM cost_attribution_daily\n"
+      ],
+      "columns": [
+        {
+          "displayName": "LLM share of cost",
+          "description": "Generation, grounding and unlabelled LLM share of list cost",
+          "expression": "SUM(CASE WHEN `component` IN ('Generation LLM', 'Grounding digests (ai_summarize)', 'Unlabelled LLM calls (chat + judge)') THEN `list_usd` ELSE 0 END) / NULLIF(SUM(`list_usd`), 0)"
+        }
+      ],
+      "catalog": "appeals_hackathon_catalog",
+      "schema": "fe_bar_appeals"
+    },
+    {
+      "name": "ds_cpa",
+      "displayName": "Cost per appeal by day",
+      "queryLines": [
+        "SELECT usage_date, appeals_generated, fully_loaded_usd, variable_usd, fixed_usd, generation_llm_usd,\n",
+        "fully_loaded_per_appeal_usd, variable_per_appeal_usd, llm_per_appeal_usd\n",
+        "FROM cost_per_appeal_daily\n"
+      ],
+      "columns": [
+        {
+          "displayName": "Appeals generated",
+          "expression": "SUM(`appeals_generated`)"
+        },
+        {
+          "displayName": "Fully loaded per appeal",
+          "description": "Cost on days with generated appeals / appeals generated",
+          "expression": "SUM(CASE WHEN `appeals_generated` > 0 THEN `fully_loaded_usd` END) / NULLIF(SUM(`appeals_generated`), 0)"
+        },
+        {
+          "displayName": "Variable per appeal",
+          "description": "Variable cost on days with generated appeals / appeals generated",
+          "expression": "SUM(CASE WHEN `appeals_generated` > 0 THEN `variable_usd` END) / NULLIF(SUM(`appeals_generated`), 0)"
+        }
+      ],
+      "catalog": "appeals_hackathon_catalog",
+      "schema": "fe_bar_appeals"
+    },
+    {
+      "name": "ds_volume",
+      "displayName": "Cost at your volume",
+      "queryLines": [
+        "SELECT appeals_per_day, fixed_own_usd_per_day, fixed_shared_vs_usd_per_day,\n",
+        "fixed_own_usd_per_appeal, fixed_shared_vs_usd_per_appeal, variable_usd_per_appeal,\n",
+        "total_own_usd_per_appeal, total_incl_shared_vs_usd_per_appeal, variable_usd_per_day,\n",
+        "total_incl_shared_vs_usd_per_day\n",
+        "FROM cost_at_volume\n",
+        "ORDER BY appeals_per_day\n"
+      ],
+      "catalog": "appeals_hackathon_catalog",
+      "schema": "fe_bar_appeals"
+    },
+    {
+      "name": "ds_run_rate",
+      "displayName": "Fully loaded per appeal at 180 per day",
+      "queryLines": [
+        "SELECT appeals_per_day, total_incl_shared_vs_usd_per_appeal\n",
+        "FROM cost_at_volume\n",
+        "WHERE appeals_per_day = 180\n"
+      ],
+      "catalog": "appeals_hackathon_catalog",
+      "schema": "fe_bar_appeals"
+    },
+    {
+      "name": "ds_pipelines",
+      "displayName": "Pipelines, job runs and warehouse",
+      "queryLines": [
+        "SELECT usage_date, component, resource, run_ref, dbu, list_usd\n",
+        "FROM cost_attribution_daily\n",
+        "WHERE component IN ('Job compute', 'SDP pipeline', 'Lakebase sync pipeline', 'Warehouse SQL (job statements)')\n",
+        "ORDER BY usage_date, component\n"
+      ],
+      "catalog": "appeals_hackathon_catalog",
+      "schema": "fe_bar_appeals"
+    },
+    {
+      "name": "ds_agents",
+      "displayName": "Agents and Genie",
+      "queryLines": [
+        "SELECT usage_date, component, attribution, cost_type, dbu, list_usd\n",
+        "FROM cost_attribution_daily\n",
+        "WHERE component IN ('Chat endpoint (always-on)', 'Unlabelled LLM calls (chat + judge)', 'Genie space (Agent)')\n",
+        "ORDER BY usage_date, component\n"
+      ],
+      "catalog": "appeals_hackathon_catalog",
+      "schema": "fe_bar_appeals"
+    },
+    {
+      "name": "ds_fixed",
+      "displayName": "App, Lakebase and Vector Search",
+      "queryLines": [
+        "SELECT usage_date, component, resource, attribution, dbu, list_usd\n",
+        "FROM cost_attribution_daily\n",
+        "WHERE component IN ('App', 'Lakebase compute + storage', 'Vector Search endpoint (shared)')\n",
+        "ORDER BY usage_date, component\n"
+      ],
+      "catalog": "appeals_hackathon_catalog",
+      "schema": "fe_bar_appeals"
+    }
+  ],
+  "pages": [
+    {
+      "name": "overview",
+      "displayName": "Overview",
+      "layout": [
+        {
+          "widget": {
+            "name": "title-overview",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Appeals Automation Agent Insights"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 8,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "subtitle-overview",
+            "multilineTextboxSpec": {
+              "lines": [
+                "FE Bar prototype on synthetic data. Measured list-price platform cost in workspace fevm-appeals-hackathon. Method on the last page. Days are UTC."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 8,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "filter-date-overview",
+            "queries": [
+              {
+                "name": "q_date_ds_daily",
+                "query": {
+                  "datasetName": "ds_daily",
+                  "fields": [
+                    {
+                      "name": "usage_date",
+                      "expression": "`usage_date`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_date_ds_cpa",
+                "query": {
+                  "datasetName": "ds_cpa",
+                  "fields": [
+                    {
+                      "name": "usage_date",
+                      "expression": "`usage_date`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-date-range-picker",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "usage_date",
+                    "queryName": "q_date_ds_daily"
+                  },
+                  {
+                    "fieldName": "usage_date",
+                    "queryName": "q_date_ds_cpa"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Usage date"
+              }
+            }
+          },
+          "position": {
+            "x": 8,
+            "y": 0,
+            "width": 4,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi-total-cost",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_daily",
+                  "fields": [
+                    {
+                      "name": "sum(list_usd)",
+                      "expression": "SUM(`list_usd`)"
+                    },
+                    {
+                      "name": "daily(usage_date)",
+                      "expression": "DATE_TRUNC(\"DAY\", `usage_date`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(list_usd)",
+                  "displayName": "Total list cost",
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    }
+                  }
+                },
+                "period": {
+                  "fieldName": "daily(usage_date)"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Total list cost",
+                "description": "Fully loaded, all components, selected dates",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 2,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi-appeals",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_cpa",
+                  "fields": [
+                    {
+                      "name": "measure(Appeals generated)",
+                      "expression": "MEASURE(`Appeals generated`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(Appeals generated)",
+                  "displayName": "Appeals generated",
+                  "format": {
+                    "type": "number-plain",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Appeals generated",
+                "description": "Rows in appeals_output by generated_at date",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 2,
+            "width": 2,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi-fully-loaded-per-appeal",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_cpa",
+                  "fields": [
+                    {
+                      "name": "measure(Fully loaded per appeal)",
+                      "expression": "MEASURE(`Fully loaded per appeal`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(Fully loaded per appeal)",
+                  "displayName": "$ per appeal, fully loaded",
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 4
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "$ per appeal, fully loaded",
+                "description": "Measured, days with appeals only. 2026-11-26 is a partial billing day",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 2,
+            "width": 2,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi-variable-per-appeal",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_cpa",
+                  "fields": [
+                    {
+                      "name": "measure(Variable per appeal)",
+                      "expression": "MEASURE(`Variable per appeal`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(Variable per appeal)",
+                  "displayName": "$ per appeal, variable",
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 4
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "$ per appeal, variable",
+                "description": "Generation, grounding, job, SDP and Lakebase sync. Measured, days with appeals only",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 2,
+            "width": 2,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi-llm-share",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_daily",
+                  "fields": [
+                    {
+                      "name": "measure(LLM share of cost)",
+                      "expression": "MEASURE(`LLM share of cost`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(LLM share of cost)",
+                  "displayName": "LLM share of cost",
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "LLM share of cost",
+                "description": "Generation + grounding + unlabelled LLM calls, share of list cost",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 8,
+            "y": 2,
+            "width": 2,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi-run-rate-180",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_run_rate",
+                  "fields": [
+                    {
+                      "name": "total_incl_shared_vs_usd_per_appeal",
+                      "expression": "`total_incl_shared_vs_usd_per_appeal`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "total_incl_shared_vs_usd_per_appeal",
+                  "displayName": "$ per appeal at 180/day",
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 4
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "$ per appeal at 180/day",
+                "description": "Projection: fixed run-rate / 180 + measured variable per appeal. Includes shared VS",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 10,
+            "y": 2,
+            "width": 2,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "bar-daily-component",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_daily",
+                  "fields": [
+                    {
+                      "name": "daily(usage_date)",
+                      "expression": "DATE_TRUNC(\"DAY\", `usage_date`)"
+                    },
+                    {
+                      "name": "component",
+                      "expression": "`component`"
+                    },
+                    {
+                      "name": "sum(list_usd)",
+                      "expression": "SUM(`list_usd`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "daily(usage_date)",
+                  "scale": {
+                    "type": "temporal"
+                  },
+                  "displayName": "Day (UTC)"
+                },
+                "y": {
+                  "fieldName": "sum(list_usd)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "List cost ($)",
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    }
+                  }
+                },
+                "color": {
+                  "fieldName": "component",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Component"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Daily list cost by component",
+                "description": "Direct and allocated components, stacked by day (UTC)",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 5,
+            "width": 12,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "section-cpa",
+            "multilineTextboxSpec": {
+              "lines": [
+                "### Cost per appeal by day (measured)"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 11,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "table-cpa-by-day",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_cpa",
+                  "fields": [
+                    {
+                      "name": "usage_date",
+                      "expression": "`usage_date`"
+                    },
+                    {
+                      "name": "appeals_generated",
+                      "expression": "`appeals_generated`"
+                    },
+                    {
+                      "name": "fully_loaded_usd",
+                      "expression": "`fully_loaded_usd`"
+                    },
+                    {
+                      "name": "variable_usd",
+                      "expression": "`variable_usd`"
+                    },
+                    {
+                      "name": "fixed_usd",
+                      "expression": "`fixed_usd`"
+                    },
+                    {
+                      "name": "fully_loaded_per_appeal_usd",
+                      "expression": "`fully_loaded_per_appeal_usd`"
+                    },
+                    {
+                      "name": "variable_per_appeal_usd",
+                      "expression": "`variable_per_appeal_usd`"
+                    },
+                    {
+                      "name": "llm_per_appeal_usd",
+                      "expression": "`llm_per_appeal_usd`"
+                    }
+                  ],
+                  "disaggregated": true,
+                  "orders": [
+                    {
+                      "direction": "ASC",
+                      "expression": "`usage_date`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "showDescription": true,
+                "title": {
+                  "value": "Cost per appeal by day",
+                  "fields": []
+                },
+                "description": {
+                  "value": "Days with no appeals in appeals\\_output show NULL per appeal. 2026-11-26 is partial (billing to 05:30 UTC)",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "usage_date",
+                    "displayName": "Day (UTC)"
+                  },
+                  {
+                    "fieldName": "appeals_generated",
+                    "displayName": "Appeals"
+                  },
+                  {
+                    "fieldName": "fully_loaded_usd",
+                    "displayName": "Fully loaded $"
+                  },
+                  {
+                    "fieldName": "variable_usd",
+                    "displayName": "Variable $"
+                  },
+                  {
+                    "fieldName": "fixed_usd",
+                    "displayName": "Fixed $"
+                  },
+                  {
+                    "fieldName": "fully_loaded_per_appeal_usd",
+                    "displayName": "Fully loaded $/appeal"
+                  },
+                  {
+                    "fieldName": "variable_per_appeal_usd",
+                    "displayName": "Variable $/appeal"
+                  },
+                  {
+                    "fieldName": "llm_per_appeal_usd",
+                    "displayName": "LLM $/appeal"
+                  }
+                ],
+                "rowOrder": [
+                  {
+                    "by": "column",
+                    "field": {
+                      "index": 0
+                    }
+                  }
+                ]
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 12,
+            "width": 12,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "section-volume",
+            "multilineTextboxSpec": {
+              "lines": [
+                "### Cost at your volume (illustrative)"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 17,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "basis-volume",
+            "multilineTextboxSpec": {
+              "lines": [
+                "Illustrative: measured prototype run-rates at list price; production sizing and contracted rates will differ. Fixed = always-on components on 2026-11-25. Variable = measured per appeal on 2026-11-26."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 18,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "table-volume",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_volume",
+                  "fields": [
+                    {
+                      "name": "appeals_per_day",
+                      "expression": "`appeals_per_day`"
+                    },
+                    {
+                      "name": "fixed_own_usd_per_appeal",
+                      "expression": "`fixed_own_usd_per_appeal`"
+                    },
+                    {
+                      "name": "fixed_shared_vs_usd_per_appeal",
+                      "expression": "`fixed_shared_vs_usd_per_appeal`"
+                    },
+                    {
+                      "name": "variable_usd_per_appeal",
+                      "expression": "`variable_usd_per_appeal`"
+                    },
+                    {
+                      "name": "total_own_usd_per_appeal",
+                      "expression": "`total_own_usd_per_appeal`"
+                    },
+                    {
+                      "name": "total_incl_shared_vs_usd_per_appeal",
+                      "expression": "`total_incl_shared_vs_usd_per_appeal`"
+                    },
+                    {
+                      "name": "fixed_own_usd_per_day",
+                      "expression": "`fixed_own_usd_per_day`"
+                    },
+                    {
+                      "name": "total_incl_shared_vs_usd_per_day",
+                      "expression": "`total_incl_shared_vs_usd_per_day`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "appeals_per_day",
+                    "displayName": "Appeals per day"
+                  },
+                  {
+                    "fieldName": "fixed_own_usd_per_appeal",
+                    "displayName": "Fixed own $/appeal",
+                    "format": {
+                      "type": "number-currency",
+                      "currencyCode": "USD",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 4
+                      }
+                    }
+                  },
+                  {
+                    "fieldName": "fixed_shared_vs_usd_per_appeal",
+                    "displayName": "Fixed shared VS $/appeal",
+                    "format": {
+                      "type": "number-currency",
+                      "currencyCode": "USD",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 4
+                      }
+                    }
+                  },
+                  {
+                    "fieldName": "variable_usd_per_appeal",
+                    "displayName": "Variable $/appeal",
+                    "format": {
+                      "type": "number-currency",
+                      "currencyCode": "USD",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 4
+                      }
+                    }
+                  },
+                  {
+                    "fieldName": "total_own_usd_per_appeal",
+                    "displayName": "Total own $/appeal",
+                    "format": {
+                      "type": "number-currency",
+                      "currencyCode": "USD",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 4
+                      }
+                    }
+                  },
+                  {
+                    "fieldName": "total_incl_shared_vs_usd_per_appeal",
+                    "displayName": "Total incl. shared VS $/appeal",
+                    "format": {
+                      "type": "number-currency",
+                      "currencyCode": "USD",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 4
+                      }
+                    }
+                  },
+                  {
+                    "fieldName": "fixed_own_usd_per_day",
+                    "displayName": "Fixed own $/day",
+                    "format": {
+                      "type": "number-currency",
+                      "currencyCode": "USD",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 2
+                      }
+                    }
+                  },
+                  {
+                    "fieldName": "total_incl_shared_vs_usd_per_day",
+                    "displayName": "Total incl. shared VS $/day",
+                    "format": {
+                      "type": "number-currency",
+                      "currencyCode": "USD",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 2
+                      }
+                    }
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Cost per appeal at volume",
+                "description": "Fixed $/day is the 2026-11-25 run-rate; variable $/appeal is measured. Genie and unlabelled LLM are excluded here",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 19,
+            "width": 12,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "section-breakdown",
+            "multilineTextboxSpec": {
+              "lines": [
+                "### Component breakdown (direct vs allocated)"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 24,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "table-breakdown",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_daily",
+                  "fields": [
+                    {
+                      "name": "component",
+                      "expression": "`component`"
+                    },
+                    {
+                      "name": "attribution",
+                      "expression": "`attribution`"
+                    },
+                    {
+                      "name": "cost_type",
+                      "expression": "`cost_type`"
+                    },
+                    {
+                      "name": "resource",
+                      "expression": "`resource`"
+                    },
+                    {
+                      "name": "sum(dbu)",
+                      "expression": "SUM(`dbu`)"
+                    },
+                    {
+                      "name": "sum(list_usd)",
+                      "expression": "SUM(`list_usd`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "component",
+                    "displayName": "Component"
+                  },
+                  {
+                    "fieldName": "attribution",
+                    "displayName": "Attribution"
+                  },
+                  {
+                    "fieldName": "cost_type",
+                    "displayName": "Cost type"
+                  },
+                  {
+                    "fieldName": "resource",
+                    "displayName": "Resource"
+                  },
+                  {
+                    "fieldName": "sum(dbu)",
+                    "displayName": "DBU",
+                    "format": {
+                      "type": "number",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 3
+                      }
+                    }
+                  },
+                  {
+                    "fieldName": "sum(list_usd)",
+                    "displayName": "List cost ($)",
+                    "format": {
+                      "type": "number-currency",
+                      "currencyCode": "USD",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 2
+                      }
+                    }
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Component breakdown",
+                "description": "Direct = tagged to build IDs. Allocated = shared resource (rule on Method page)",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 25,
+            "width": 12,
+            "height": 8
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    },
+    {
+      "name": "components",
+      "displayName": "Components",
+      "layout": [
+        {
+          "widget": {
+            "name": "title-components",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Components"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 8,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "subtitle-components",
+            "multilineTextboxSpec": {
+              "lines": [
+                "Pipelines and job runs, agents, app, Lakebase, Genie, warehouse (allocated) and Vector Search (shared)."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 8,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "filter-date-components",
+            "queries": [
+              {
+                "name": "q_date_ds_pipelines",
+                "query": {
+                  "datasetName": "ds_pipelines",
+                  "fields": [
+                    {
+                      "name": "usage_date",
+                      "expression": "`usage_date`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_date_ds_agents",
+                "query": {
+                  "datasetName": "ds_agents",
+                  "fields": [
+                    {
+                      "name": "usage_date",
+                      "expression": "`usage_date`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "q_date_ds_fixed",
+                "query": {
+                  "datasetName": "ds_fixed",
+                  "fields": [
+                    {
+                      "name": "usage_date",
+                      "expression": "`usage_date`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-date-range-picker",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "usage_date",
+                    "queryName": "q_date_ds_pipelines"
+                  },
+                  {
+                    "fieldName": "usage_date",
+                    "queryName": "q_date_ds_agents"
+                  },
+                  {
+                    "fieldName": "usage_date",
+                    "queryName": "q_date_ds_fixed"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Usage date"
+              }
+            }
+          },
+          "position": {
+            "x": 8,
+            "y": 0,
+            "width": 4,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "section-pipelines",
+            "multilineTextboxSpec": {
+              "lines": [
+                "### Pipelines, job runs and warehouse"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "bar-pipelines",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_pipelines",
+                  "fields": [
+                    {
+                      "name": "daily(usage_date)",
+                      "expression": "DATE_TRUNC(\"DAY\", `usage_date`)"
+                    },
+                    {
+                      "name": "component",
+                      "expression": "`component`"
+                    },
+                    {
+                      "name": "sum(list_usd)",
+                      "expression": "SUM(`list_usd`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "daily(usage_date)",
+                  "scale": {
+                    "type": "temporal"
+                  },
+                  "displayName": "Day (UTC)"
+                },
+                "y": {
+                  "fieldName": "sum(list_usd)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "List cost ($)",
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    }
+                  }
+                },
+                "color": {
+                  "fieldName": "component",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Component"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Pipeline, job and warehouse cost by day",
+                "description": "Warehouse SQL is allocated: job statement minutes x 24 DBU/h",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 12,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "table-per-run",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_pipelines",
+                  "fields": [
+                    {
+                      "name": "usage_date",
+                      "expression": "`usage_date`"
+                    },
+                    {
+                      "name": "component",
+                      "expression": "`component`"
+                    },
+                    {
+                      "name": "resource",
+                      "expression": "`resource`"
+                    },
+                    {
+                      "name": "run_ref",
+                      "expression": "`run_ref`"
+                    },
+                    {
+                      "name": "dbu",
+                      "expression": "`dbu`"
+                    },
+                    {
+                      "name": "list_usd",
+                      "expression": "`list_usd`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "usage_date",
+                    "displayName": "Day (UTC)"
+                  },
+                  {
+                    "fieldName": "component",
+                    "displayName": "Component"
+                  },
+                  {
+                    "fieldName": "resource",
+                    "displayName": "Resource"
+                  },
+                  {
+                    "fieldName": "run_ref",
+                    "displayName": "Run ID"
+                  },
+                  {
+                    "fieldName": "dbu",
+                    "displayName": "DBU",
+                    "format": {
+                      "type": "number",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 3
+                      }
+                    }
+                  },
+                  {
+                    "fieldName": "list_usd",
+                    "displayName": "List cost ($)",
+                    "format": {
+                      "type": "number-currency",
+                      "currencyCode": "USD",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 4
+                      }
+                    }
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Per run: job runs and pipeline updates",
+                "description": "Run ID = job_run_id (job) or dlt_update_id (pipeline). Warehouse rows have no run ID",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 9,
+            "width": 12,
+            "height": 8
+          }
+        },
+        {
+          "widget": {
+            "name": "section-agents",
+            "multilineTextboxSpec": {
+              "lines": [
+                "### Agents: chat endpoint always-on vs per request, LLM judge, Genie"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 17,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "bar-agents",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_agents",
+                  "fields": [
+                    {
+                      "name": "daily(usage_date)",
+                      "expression": "DATE_TRUNC(\"DAY\", `usage_date`)"
+                    },
+                    {
+                      "name": "component",
+                      "expression": "`component`"
+                    },
+                    {
+                      "name": "sum(list_usd)",
+                      "expression": "SUM(`list_usd`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "daily(usage_date)",
+                  "scale": {
+                    "type": "temporal"
+                  },
+                  "displayName": "Day (UTC)"
+                },
+                "y": {
+                  "fieldName": "sum(list_usd)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "List cost ($)",
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    }
+                  }
+                },
+                "color": {
+                  "fieldName": "component",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Component"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Agent and Genie cost by day",
+                "description": "Chat endpoint is always-on uptime (fixed). Unlabelled LLM calls mix chat per-request tokens and the judge",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 18,
+            "width": 6,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "table-agents",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_agents",
+                  "fields": [
+                    {
+                      "name": "component",
+                      "expression": "`component`"
+                    },
+                    {
+                      "name": "attribution",
+                      "expression": "`attribution`"
+                    },
+                    {
+                      "name": "cost_type",
+                      "expression": "`cost_type`"
+                    },
+                    {
+                      "name": "sum(dbu)",
+                      "expression": "SUM(`dbu`)"
+                    },
+                    {
+                      "name": "sum(list_usd)",
+                      "expression": "SUM(`list_usd`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "component",
+                    "displayName": "Component"
+                  },
+                  {
+                    "fieldName": "attribution",
+                    "displayName": "Attribution"
+                  },
+                  {
+                    "fieldName": "cost_type",
+                    "displayName": "Cost type"
+                  },
+                  {
+                    "fieldName": "sum(dbu)",
+                    "displayName": "DBU",
+                    "format": {
+                      "type": "number",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 3
+                      }
+                    }
+                  },
+                  {
+                    "fieldName": "sum(list_usd)",
+                    "displayName": "List cost ($)",
+                    "format": {
+                      "type": "number-currency",
+                      "currencyCode": "USD",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 2
+                      }
+                    }
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Agents by cost type",
+                "description": "Genie: per-question usage for the FE Bar space. Free-tier usage is $0 at list",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 18,
+            "width": 6,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "section-fixed",
+            "multilineTextboxSpec": {
+              "lines": [
+                "### App, Lakebase and Vector Search (shared)"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 23,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "bar-fixed",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_fixed",
+                  "fields": [
+                    {
+                      "name": "daily(usage_date)",
+                      "expression": "DATE_TRUNC(\"DAY\", `usage_date`)"
+                    },
+                    {
+                      "name": "component",
+                      "expression": "`component`"
+                    },
+                    {
+                      "name": "sum(list_usd)",
+                      "expression": "SUM(`list_usd`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "daily(usage_date)",
+                  "scale": {
+                    "type": "temporal"
+                  },
+                  "displayName": "Day (UTC)"
+                },
+                "y": {
+                  "fieldName": "sum(list_usd)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "List cost ($)",
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    }
+                  }
+                },
+                "color": {
+                  "fieldName": "component",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Component"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "App, Lakebase and VS cost by day",
+                "description": "All three are fixed uptime cost",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 24,
+            "width": 6,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "table-fixed",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_fixed",
+                  "fields": [
+                    {
+                      "name": "component",
+                      "expression": "`component`"
+                    },
+                    {
+                      "name": "resource",
+                      "expression": "`resource`"
+                    },
+                    {
+                      "name": "attribution",
+                      "expression": "`attribution`"
+                    },
+                    {
+                      "name": "sum(dbu)",
+                      "expression": "SUM(`dbu`)"
+                    },
+                    {
+                      "name": "sum(list_usd)",
+                      "expression": "SUM(`list_usd`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "component",
+                    "displayName": "Component"
+                  },
+                  {
+                    "fieldName": "resource",
+                    "displayName": "Resource"
+                  },
+                  {
+                    "fieldName": "attribution",
+                    "displayName": "Attribution"
+                  },
+                  {
+                    "fieldName": "sum(dbu)",
+                    "displayName": "DBU",
+                    "format": {
+                      "type": "number",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 3
+                      }
+                    }
+                  },
+                  {
+                    "fieldName": "sum(list_usd)",
+                    "displayName": "List cost ($)",
+                    "format": {
+                      "type": "number-currency",
+                      "currencyCode": "USD",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 2
+                      }
+                    }
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "App, Lakebase and VS by resource",
+                "description": "VS endpoint is shared with an earlier build: 100% of endpoint uptime from 2026-11-24 (upper bound)",
+                "showDescription": true
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 24,
+            "width": 6,
+            "height": 5
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    },
+    {
+      "name": "method",
+      "displayName": "Method",
+      "layout": [
+        {
+          "widget": {
+            "name": "title-method",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Method: how this cost is measured"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "method-1",
+            "multilineTextboxSpec": {
+              "lines": [
+                "### Sources Cost is system.billing.usage for this workspace only (workspace_id 7474656043998914), joined to system.billing.list_prices on SKU and usage start time (effective list price). List price only: no discounts, no committed-use rates. Logic lives in the UC view cost_attribution_daily; the dashboard and the evidence read the same view."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 12,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "method-2",
+            "multilineTextboxSpec": {
+              "lines": [
+                "### Direct vs allocated **Direct**: the billing record carries a build-owned ID: job_id, pipeline id, app_name, serving endpoint name, Lakebase project id, Genie agent_id, or a foundation-model call tagged with the build's warehouse. **Allocated**: a shared resource. Warehouse 559faf81 is shared and uptime-billed, so only job-attributed statement minutes are charged to the build (system.query.history job_info), at 24 DBU/h for Medium serverless, the COST_2B rule. Idle uptime and other users' statements stay unallocated. The Vector Search endpoint appeals-vs-endpoint is shared with an earlier build; 100% of its uptime from 2026-11-24 is shown, which is an upper bound."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 4,
+            "width": 12,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "method-3",
+            "multilineTextboxSpec": {
+              "lines": [
+                "### Variable vs fixed **Variable** scales with appeals: generation LLM, grounding digests, job compute, job warehouse share, SDP and Lakebase sync pipelines. **Fixed** is always-on uptime: app, chat endpoint, Lakebase compute and storage, shared VS endpoint. **Other** is Genie per-question usage and unlabelled LLM calls (chat per-request tokens and the judge, which carry no caller tag). Other is in fully loaded, not in variable."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 8,
+            "width": 12,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "method-4",
+            "multilineTextboxSpec": {
+              "lines": [
+                "### Billing lag and date range Complete through 2026-11-25 (UTC). 2026-11-26 is partial: billing ran to 05:30 UTC, so its fixed cost is under-counted until billing closes. Billing usage can lag a few hours. Appeals per day come from appeals_output.generated_at, the current table state. The 2026-11-24 and 2026-11-25 generations were overwritten by a clean-state rerun, so those days show cost with no appeals in the table. Delta history shows 180 appeals inserted on each of the three days."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 11,
+            "width": 12,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "method-5",
+            "multilineTextboxSpec": {
+              "lines": [
+                "### What is excluded Other builds on this workspace: their endpoints, apps, jobs, Genie spaces, Lakebase projects and Vector Search indexes. Genie Code and GENIE_ONE usage. Other warehouses and their statements. ai_parse_document calls. Networking, storage and predictive-optimization usage. Free-tier Genie usage is $0 at list."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 15,
+            "width": 12,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "method-6",
+            "multilineTextboxSpec": {
+              "lines": [
+                "### How to read cost per appeal Fixed cost does not scale with volume, so cost per appeal falls as volume rises. Variable cost per appeal is roughly constant. Use the Cost at your volume table to see fully loaded cost at 60, 150, 180, 300 and 600 appeals a day. Treat the measured per-day figures as the audit trail, not as production sizing. Production volumes, contracted rates and the health system's own tenancy will change the fixed base."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 18,
+            "width": 12,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "method-7",
+            "multilineTextboxSpec": {
+              "lines": [
+                "### Cross-check with COST_2B docs/business_case/COST_2B.md measured $0.069 LLM per appeal, about $0.11 variable and about $0.51 fully loaded at 60 appeals a day. This view reproduces the LLM figure exactly ($0.069 on 2026-11-26) and gives about $0.10 variable and about $0.52 fully loaded at 60 per day with own resources. Differences: grounding digests were fully cached on 2026-11-26 (zero cost; COST_2B ran a cold cache), and the warehouse share is measured from job statements, not estimated."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 21,
+            "width": 12,
+            "height": 4
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "canvasBackgroundColor": {
+        "light": "#FCFCFC",
+        "dark": "#1F272D"
+      },
+      "widgetBackgroundColor": {
+        "light": "#FFFFFF",
+        "dark": "#11171C"
+      },
+      "widgetBorderColor": {
+        "light": "#FFFFFF",
+        "dark": "#11171C"
+      },
+      "fontColor": {
+        "light": "#11171C",
+        "dark": "#E8ECF0"
+      },
+      "selectionColor": {
+        "light": "#2272B4",
+        "dark": "#8ACAFF"
+      },
+      "visualizationColors": [
+        "#FFA600",
+        "#FF7054",
+        "#DE5582",
+        "#995495",
+        "#4E5185",
+        "#1D425C",
+        "#99DDB4"
+      ],
+      "widgetHeaderAlignment": "LEFT"
+    }
+  }
+}

@@ -1,6 +1,6 @@
 # Deck numbers: single source of truth (FE Bar Health System POV)
 
-Every $, %, count and ratio the deck uses is listed here, once, with its label and source. If a number is not in this file, do not put it in the deck. Model outputs come from `MODEL.md` and the Sheet (https://docs.google.com/spreadsheets/d/1rHqmmLWK1FPXBLosbTqQcNnEuabjqXslimmLAV7400g/edit). Retrieval date 2026-11-24; prototype metrics re-read 2026-11-25 after the clean data-layer rerun (as_of 2026-11-25; see `evidence/11_eval_180.md`).
+Every $, %, count and ratio the deck uses is listed here, once, with its label and source. If a number is not in this file, do not put it in the deck. Model outputs come from `MODEL.md` and the Sheet (https://docs.google.com/spreadsheets/d/1rHqmmLWK1FPXBLosbTqQcNnEuabjqXslimmLAV7400g/edit). Retrieval date 2026-11-24; prototype metrics from the regenerated 180-row eval (run `f7047f94…`, run_ts 2026-11-26T03:09:43Z; see `evidence/11_eval_180.md`).
 
 **Labels:** `public fact` · `industry benchmark` · `assumption to validate with the health system's RCM` · `model output` · `prototype, synthetic data` (never a health-system result).
 
@@ -21,8 +21,8 @@ Tiers: **Floor** = sourced base; **Likely** = Floor × dollar multiplier 2.0x (a
 | Total annual cost (platform + run), $ | 102,314 | 69,914 | 71,372 | model output | Model row 34 |
 | One-time implementation, $ | 216,000 | 144,000 | 144,000 | assumption to validate with the health system's RCM | Inputs I22 |
 | Annual run cost (people), $ | 90,000 | 60,000 | 60,000 | assumption to validate with the health system's RCM | Inputs I23 |
-| Annual return on run cost, top-down (net ÷ annual cost; was "ROI") | 20.2x | 61.0x | 120.2x | model output | Model row 37 |
-| Annual return on run cost, bottom-up (was "ROI") | 10.3x | 15.6x | 135.4x | model output | Model row 38 |
+| Annual return on run cost, top-down (net ÷ annual cost) | 20.2x | 61.0x | 120.2x | model output | Model row 37 |
+| Annual return on run cost, bottom-up (net ÷ annual cost) | 10.3x | 15.6x | 135.4x | model output | Model row 38 |
 | Payback, top-down, months | 1.3 | 0.4 | 0.2 | model output | Model row 40 |
 | Payback, bottom-up, months | 2.5 | 1.6 | 0.2 | model output | Model row 39 |
 | Cost to collect (annual cost ÷ bottom-up recovery) | 8.8% | 6.0% | 0.7% | model output | Model row 42 |
@@ -104,15 +104,15 @@ All labelled **prototype, synthetic data**. Sources are repo evidence files, not
 
 | Number | Value | Label | Source |
 |---|---|---|---|
-| Encounters evaluated, latest eval run | 180 | prototype, synthetic data | `evidence/11_eval_180.md` (run `f7047f94…`, 2026-11-26T03:09:43Z; run ID corrected 2026-11-25 from the superseded `3b132eeb…`) |
+| Encounters evaluated, latest eval run | 180 | prototype, synthetic data | `evidence/11_eval_180.md` (run `f7047f94…`, run_ts 2026-11-26T03:09:43Z) |
 | Accuracy vs generator ground truth | **97.2%** (0.9722; 175 of 180) | prototype, synthetic data | `evidence/11_eval_180.md`, latest eval |
 | Unsafe rate (approved where it should not be) | **0.0%** | prototype, synthetic data | `evidence/11_eval_180.md` |
 | Parse failures | 0 | prototype, synthetic data | `evidence/11_eval_180.md` |
 | Quote-verified rate, normalised / strict verbatim | 85.3% / 54.7% | prototype, synthetic data | `evidence/11_eval_180.md` |
 | Appeals by recommendation: WARRANTED / NOT WARRANTED / NEEDS REVIEW | **72 / 66 / 42** (of 180) | prototype, synthetic data | `evidence/08_job_run.md` (run 3); Lakebase worklist agrees (`evidence/03_lakebase.md`) |
 | Letters generated (WARRANTED only) | 72 | prototype, synthetic data | `evidence/04_genai_generation.md` |
-| End-to-end job runs | 3 of 3 runs SUCCESS, 10 of 10 tasks each (60 → 120 → 180 appeals) | prototype, synthetic data | `evidence/08_job_run.md` |
-| Variable platform cost per appeal (LLM $0.069 of $0.107) | $0.107 | prototype-measured, list price | `docs/business_case/COST_2B.md` (S18) |
+| End-to-end job runs | 3 of 3 runs SUCCESS, 10 of 10 tasks each (60 → 120 → 180 appeals), before `genai_evaluate` was added (job now 12 tasks) | prototype, synthetic data | `evidence/08_job_run.md` |
+| Variable platform cost per appeal (LLM $0.069 of $0.107) | $0.11 ($0.107 unrounded) | prototype-measured, list price | `docs/business_case/COST_2B.md` (S18) |
 | Fixed platform cost, own resources, per year | $8,900 (incl. shared VS: $11,300) | prototype-measured, list price | COST_2B.md |
 | Fully loaded cost per appeal at prototype scale (60/day, own resources) | **$0.51** | prototype-measured, list price | COST_2B.md |
 | Fully loaded at 60/day incl. shared VS / with chat scale-to-zero | $0.62 / ~$0.29 | prototype-measured, list price | COST_2B.md |
@@ -135,20 +135,17 @@ Source: `evidence/14_mlflow_genai_eval.md` (job run `263358598052015`, judge `da
 **Quote framing (use in this order).**
 1. Lead with per-quote **normalised**: 89.7% on the 60-row judge run; 85.3% on the 180-row deterministic eval (`evidence/11_eval_180.md`).
 2. Then the strict figure: 58.7% (judge run) and 54.7% (180 rows).
-3. Explain the strict gap: PDF-extraction artefacts in the criteria text (for example fused footnote digits and bullet glyphs) and genuine paraphrase. The cause is described in `evidence/05_eval_results.md` (superseded run; the mechanism is the same).
+3. Explain the strict gap: PDF-extraction artefacts in the criteria text (for example fused footnote digits and bullet glyphs) and genuine paraphrase. The cause is described in `evidence/04_genai_generation.md` (quote verification) and `evidence/14_mlflow_genai_eval.md`.
 4. Pair the quote figures with groundedness 98.3% and unsafe 0%.
 5. Do not show the row-level strict pass (0%, because one unverified span fails a row) as a quote metric.
 
-**Superseded (do not use):** the 2026-11-24 figures (180 rows: 70 / 64 / 46; accuracy 95.6%; quote 55.9% / 87.5%) that appeared in earlier drafts, and `evidence/05_eval_results.md` (120 encounters, 96.7%). Both come from the pre-rerun data layer and conflict with the 2026-11-25 run above.
-
 **Caveats for the slide:** list prices, not the health system contracted rates. Warehouse and pipeline costs are allocations. The eval labels are generator ground truth on synthetic data.
 
-## 7. Headline (wording revised by Naveen, 2026-11-25)
+## 7. Headline (current)
 
-- **Headline (current):** "$2M–$4M a year of earned revenue recovered at about 50 cents an appeal — paying back the pilot within a quarter, even at the floor."
-- Support for "within a quarter": top-down payback 1.3 months and bottom-up 2.5 months at Floor (section 1b). The earlier "20× return" wording is retired because 20.2× is net ÷ annual cost, which excludes the one-time pilot. Where a multiple appears it is labelled "annual return on run cost"; year-1 incl. pilot at Floor is about 6×.
-- Previous wording, for the record: "...a 20× return even at the floor."
+- **Headline:** "$2M–$4M a year of earned revenue recovered at about 50 cents an appeal — paying back the pilot within a quarter, even at the floor."
+- Support for "within a quarter": top-down payback 1.3 months and bottom-up 2.5 months at Floor (section 1b). Any multiple is labelled "annual return on run cost" (net ÷ annual cost, excludes the one-time cost). Year-1 return including the pilot at Floor is about 6×. Do not present 20.2× as a return on the pilot.
 - Basis: $2.17M (Floor, top-down) to $4.33M (Likely, top-down) per year; $0.51 per appeal (prototype fully loaded, 60/day, COST_2B); 20.2× annual return on run cost, top-down, at Floor (Model row 37).
-- The tier table shows **Ceiling ~$8.7M** (top-down, sourced upside rates) and **bottom-up as a lower cross-check** (Floor and Likely $1.2M; Ceiling $9.7M). Show both, with the bottom-up cross-check in the table, not hidden.
-- Caveats that must travel with the headline: the Likely $4.3M depends on the unsourced 2.0x dollar multiplier (sensitivity $3.3M–$6.5M at 1.5x–3.0x). ROI rests on placeholder implementation and run costs. Cost per appeal is prototype list-price, not the health system contracted rates.
+- The tier table shows **Ceiling $8.65M** (top-down, sourced upside rates) and **bottom-up as a lower cross-check** (Floor and Likely $1.16M; Ceiling $9.74M). Show both, with the bottom-up cross-check in the table, not hidden.
+- Caveats that must travel with the headline: the Likely $4.33M depends on the unsourced 2.0x dollar multiplier (sensitivity $3.25M at 1.5x and $6.50M at 3.0x). Payback and ROI rest on placeholder implementation and run costs. Cost per appeal is prototype list-price, not the health system contracted rates.
 - Cost per appeal: **$0.51** (prototype, 60/day) is the deck figure. The health-system-scale model's $1.05 (Likely) is for the model only.

@@ -10,7 +10,7 @@ WITH raw AS (
   SELECT regexp_replace(_c0, '[*]+$', '') AS code_clean,
          _c1, _c2, _c3, _c4, _c5, _c6, _c7, _c8, _c9, _c10, _c11, _c12, _c13, _c14, _c15, _c16, _c17
   FROM read_files(
-    '/Volumes/appeals_hackathon_catalog/fe_bar_appeals/raw_references/2025_MPFS_Indicator_Listing.xlsx',
+    '${refs_root}/2025_MPFS_Indicator_Listing.xlsx',
     format => 'excel', headerRows => 0, dataAddress => '2025 MPFS Indicators')
 )
 SELECT code_clean AS `Code`, _c1 AS `Modifier`, _c2 AS `S`, _c3 AS `GLB`,

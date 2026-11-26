@@ -1,0 +1,10 @@
+# Follows bundle-examples knowledge_base/pipeline_with_schema/resources/schema.yml (UC schema).
+# Bound to the LIVE managed schema appeals_hackathon_catalog.fe_bar_appeals (bundle deployment bind). No grants block.
+resources:
+  schemas:
+    fe_bar_appeals_schema:
+      catalog_name: ${var.catalog}
+      name: ${var.schema}
+      comment: "FE Bar: medical-necessity appeals generation (synthetic data). Built from a seeded generator via Lakeflow."
+      properties:
+        owner: root   # live property (set outside the bundle); declared so the plan does not try to drop it

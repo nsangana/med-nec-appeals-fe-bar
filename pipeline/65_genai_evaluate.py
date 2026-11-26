@@ -19,6 +19,7 @@
 
 import json
 import os
+import re
 import sys
 import uuid
 from datetime import datetime, timezone
@@ -27,14 +28,27 @@ import mlflow
 from mlflow.entities import Feedback
 from mlflow.genai.scorers import Guidelines, RetrievalGroundedness, scorer
 
-dbutils.widgets.text("catalog", "appeals_hackathon_catalog")  # noqa: F821
-dbutils.widgets.text("schema", "fe_bar_appeals")  # noqa: F821
+def _param(name, default):
+    """Job base_parameters / widgets with a local default for interactive runs."""
+    try:
+        dbutils.widgets.text(name, default)  # noqa: F821 (provided by the Databricks runtime)
+        return dbutils.widgets.get(name)  # noqa: F821
+    except NameError:
+        return default
+
 dbutils.widgets.text("max_rows", "60")  # noqa: F821
 dbutils.widgets.text("cost_cap_usd", "5")  # noqa: F821
 dbutils.widgets.text("judge_model", "databricks:/databricks-claude-sonnet-4-6")  # noqa: F821
 
-CATALOG = dbutils.widgets.get("catalog")  # noqa: F821
-SCHEMA = dbutils.widgets.get("schema")  # noqa: F821
+CATALOG_DEFAULT = "appeals_hackathon_catalog"  # live value; the job passes the bundle target's catalog
+SCHEMA_DEFAULT = "fe_bar_appeals"  # live value; the job passes the bundle target's schema
+CATALOG = _param("catalog", CATALOG_DEFAULT).strip()
+SCHEMA = _param("schema", SCHEMA_DEFAULT).strip()
+for _name, _val in (("catalog", CATALOG), ("schema", SCHEMA)):
+    # Object names (tables, views, functions, volumes, paths) are built from these two values only.
+    # Plain identifiers only: no quotes, dots, spaces or SQL, so nothing user-supplied reaches SQL text.
+    if not re.fullmatch(r"[A-Za-z0-9_]+", _val):
+        raise ValueError(f"{_name} must be a plain identifier, got {_val!r}")
 FQ = f"{CATALOG}.{SCHEMA}"
 MAX_ROWS = int(dbutils.widgets.get("max_rows"))  # noqa: F821
 COST_CAP_USD = float(dbutils.widgets.get("cost_cap_usd"))  # noqa: F821

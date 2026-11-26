@@ -1,11 +1,20 @@
 # FE Bar medical-necessity appeals (Databricks Asset Bundle).
 # Owner of the SDP pipeline resource: resources/fe_bar_appeals.pipeline.yml (Agent A).
 # The orchestrator adds resources/fe_bar_appeals.job.yml. Deploy: databricks bundle deploy --profile fevm-appeals-hackathon
+#
+# Targets:
+#   default  live build (names exact, no prefix). Deploys everything, including the default-only resources in
+#            targets/default/ (Lakebase, chat endpoint, registered model, VS index).
+#   smoke    test deploy in schema fe_bar_appeals_test with name prefix fe-bar-appeals-smoke. Deploys ONLY the schema,
+#            volumes, SDP pipeline, job, dashboard and Genie space. Dashboard and Genie JSON come from build/smoke/
+#            (run scripts/render_configs.py first, or scripts/deploy_all.sh -t smoke).
 bundle:
   name: med-nec-appeals-fe-bar
 
 include:
   - resources/*.yml
+  # Resources that exist only in the default target (merged into targets.default.resources, see each file).
+  - targets/default/*.yml
 
 variables:
   catalog:
@@ -17,6 +26,39 @@ variables:
   warehouse_id:
     description: SQL warehouse used by SQL tasks (bootstrap/grounding/evaluate)
     default: 559faf81d610a2a1
+  name_prefix:
+    description: Prefix for named resources (pipeline, job, chat endpoint)
+    default: fe-bar-appeals
+  lakebase_project:
+    description: Lakebase Autoscaling project id (also its display name)
+    default: fe-bar-appeals-lakebase
+  lakebase_catalog:
+    description: Lakebase UC catalog name (catalog_id; underscores only)
+    default: fe_bar_appeals_lakebase
+  vs_endpoint:
+    description: Vector Search endpoint (shared with an earlier build, not declared in the bundle)
+    default: appeals-vs-endpoint
+  chat_model:
+    description: Unity Catalog registered model name for the chat agent (in catalog.schema)
+    default: appeals_chat_agent
+  max_appeals:
+    description: Max appeal generations per job run (job parameter max_appeals)
+    default: "60"
+  enable_lakebase_sync:
+    description: 'true runs the Lakebase serving sync (job parameter enable_lakebase_sync)'
+    default: "true"
+  dashboard_title:
+    description: Title of the AI/BI dashboard
+    default: Appeals Automation Agent Insights
+  genie_title:
+    description: Title of the Genie space
+    default: FE Bar – Medical Necessity Appeals
+  dashboard_file:
+    description: Dashboard JSON that the dashboard resource deploys (smoke points at build/smoke)
+    default: ../dashboards/appeals_automation_agent_insights.lvdash.json
+  genie_file:
+    description: Genie space JSON that the Genie resource deploys (smoke points at build/smoke)
+    default: ../genie/appeals_metrics.geniespace.json
 
 targets:
   # No `mode: development` on purpose: resource names stay exact (fe-bar-appeals-*).
@@ -24,3 +66,17 @@ targets:
     default: true
     workspace:
       host: https://fevm-appeals-hackathon.cloud.databricks.com
+
+  smoke:
+    workspace:
+      host: https://fevm-appeals-hackathon.cloud.databricks.com
+      root_path: /Workspace/Users/${workspace.current_user.userName}/.bundle/${bundle.name}/smoke
+    variables:
+      schema: fe_bar_appeals_test
+      name_prefix: fe-bar-appeals-smoke
+      max_appeals: "5"
+      enable_lakebase_sync: "false"
+      dashboard_title: Appeals Automation Agent Insights (smoke)
+      genie_title: FE Bar – Medical Necessity Appeals (smoke)
+      dashboard_file: ../build/smoke/appeals_automation_agent_insights.lvdash.json
+      genie_file: ../build/smoke/appeals_metrics.geniespace.json

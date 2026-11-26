@@ -1,0 +1,14 @@
+# Follows bundle-examples knowledge_base/dashboard_nyc_taxi/resources/nyc_taxi_trip_analysis.dashboard.yml.
+# Bound to the LIVE dashboard 01f1e968adcd1e3b93920b557b986458 (bundle deployment bind; not duplicated).
+# file_path is a variable: default = the source JSON; smoke = build/smoke/ (scripts/render_configs.py rewrites catalog/schema).
+# Dataset queries use bare table names; dataset_catalog / dataset_schema supply the catalog and schema.
+resources:
+  dashboards:
+    fe_bar_appeals_dashboard:
+      display_name: ${var.dashboard_title}
+      file_path: ${var.dashboard_file}
+      warehouse_id: ${var.warehouse_id}
+      embed_credentials: false
+      dataset_catalog: ${var.catalog}
+      dataset_schema: ${var.schema}
+      parent_path: /Users/${workspace.current_user.userName}

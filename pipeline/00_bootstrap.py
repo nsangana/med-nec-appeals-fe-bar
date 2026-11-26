@@ -2,8 +2,8 @@
 # MAGIC %md
 # MAGIC # 00_bootstrap — FE Bar appeals: one-time, idempotent foundation
 # MAGIC
-# MAGIC Stands up the reference + grounding objects the generation stages depend on, in
-# MAGIC `appeals_hackathon_catalog.fe_bar_appeals`:
+# MAGIC Stands up the reference + grounding objects the generation stages depend on, in the `catalog`.`schema`
+# MAGIC job parameters (live default `appeals_hackathon_catalog`.`fe_bar_appeals`):
 # MAGIC - `denial_strategy` (CARC routing reference)
 # MAGIC - `med_nec_criteria` (ai_parse_document over the 2 public criteria PDFs, CDF on) + VS Delta Sync index
 # MAGIC - `mpfs_indicator_descriptors` (ai_parse_document -> ai_query extraction from the public Noridian PDF;
@@ -20,9 +20,27 @@
 # MAGIC `Definition_of_Med_Nec.pdf`, `MPFS_Indicator_Descriptors_-_JE_Part_B_-_Noridian.pdf`, `2025_MPFS_Indicator_Listing.xlsx`.
 
 # COMMAND ----------
+import re
 
-CATALOG = "appeals_hackathon_catalog"
-SCHEMA = "fe_bar_appeals"
+
+def _param(name, default):
+    """Job base_parameters / widgets with a local default for interactive runs."""
+    try:
+        dbutils.widgets.text(name, default)  # noqa: F821 (provided by the Databricks runtime)
+        return dbutils.widgets.get(name)  # noqa: F821
+    except NameError:
+        return default
+
+
+CATALOG_DEFAULT = "appeals_hackathon_catalog"  # live value; the job passes the bundle target's catalog
+SCHEMA_DEFAULT = "fe_bar_appeals"  # live value; the job passes the bundle target's schema
+CATALOG = _param("catalog", CATALOG_DEFAULT).strip()
+SCHEMA = _param("schema", SCHEMA_DEFAULT).strip()
+for _name, _val in (("catalog", CATALOG), ("schema", SCHEMA)):
+    # Object names (tables, views, functions, volumes, paths) are built from these two values only.
+    # Plain identifiers only: no quotes, dots, spaces or SQL, so nothing user-supplied reaches SQL text.
+    if not re.fullmatch(r"[A-Za-z0-9_]+", _val):
+        raise ValueError(f"{_name} must be a plain identifier, got {_val!r}")
 FQ = f"{CATALOG}.{SCHEMA}"
 RAW = f"/Volumes/{CATALOG}/{SCHEMA}/raw_references"
 VS_ENDPOINT = "appeals-vs-endpoint"

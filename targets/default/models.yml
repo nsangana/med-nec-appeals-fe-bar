@@ -1,0 +1,31 @@
+# DEFAULT TARGET ONLY (not deployed to smoke). Unity Catalog registered model + Vector Search index. Follows
+# bundle-examples knowledge_base/vector_search_product_discovery (DELTA_SYNC form) and the registered_model resource type.
+# Both are BOUND to live objects. Model VERSIONS are owned by agent/build_and_deploy.py (agents.deploy); this file
+# does not manage versions, grants or aliases. The VS endpoint (${var.vs_endpoint}) is shared with an earlier build
+# and is not declared here.
+targets:
+  default:
+    resources:
+      registered_models:
+        fe_bar_chat_agent_model:
+          catalog_name: ${var.catalog}
+          schema_name: ${var.schema}
+          name: ${var.chat_model}
+          lifecycle:
+            prevent_destroy: true
+
+      vector_search_indexes:
+        fe_bar_criteria_index:
+          name: ${var.catalog}.${var.schema}.med_nec_criteria_index
+          endpoint_name: ${var.vs_endpoint}
+          primary_key: chunk_id
+          index_type: DELTA_SYNC
+          index_subtype: HYBRID
+          delta_sync_index_spec:
+            source_table: ${var.catalog}.${var.schema}.med_nec_criteria
+            pipeline_type: TRIGGERED
+            embedding_source_columns:
+              - name: chunk_to_embed
+                embedding_model_endpoint_name: databricks-gte-large-en
+          lifecycle:
+            prevent_destroy: true
