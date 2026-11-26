@@ -91,77 +91,74 @@ One hero claim runs through all six stages. The claim is **Elena Marquez** (fict
 
 ## 3. Architecture
 
-### 3.1 Data flow
+### 3.1 Reference architecture
 
-```
-  generator (job task, seed 20261124)                 public references (4 files)
-          │                                                     │
-          ▼                                                     ▼
-  UC volume  landing/{claims,clinical_notes}        UC volume  raw_references
-          │ Auto Loader                                         │ ai_parse_document / read_files
-          ▼                                                     ▼
-  SDP fe-bar-appeals-sdp                              med_nec_criteria, denial_strategy,
-  bronze_claims · bronze_clinical_notes               mpfs_indicator_listing, mpfs_indicator_descriptors
-          │ expectations (drop / warn)                          │      │
-          ▼                                                     │      └─► VS index med_nec_criteria_index
-  silver_claim_lines · silver_clinical_notes                    │          (serves the chat agent)
-          │                                                     │
-          ▼                                                     │
-  gold: gold_denial_worklist (500) · mednecessity_ai_agent · medical_records
-          │                                                     │
-          ├──────────────► encounter_grounding (ai_summarize)  ◄┘
-          │                 data_sheet_facts (SQL, no LLM)
-          │                 appeals_output  (ai_query, ≤60/run, MERGE on input_hash)
-          │                       │
-          │                       ├──► UC volume appeal_pdfs  (letter, AI worksheet, data sheet)
-          │                       ▼
-          │                 worklist_serving (Delta, CDF)
-          │                       │ synced table
-          │                       ▼
-          │              Lakebase Autoscaling  fe_bar_appeals.worklist_serving
-          │                       ▲                       │
-          │                       │ reads                 ▼
-          │              ┌────────┴───────────┐   public.review_actions (append-only)
-          │              │ App fe-bar-appeals │   public.review_state (view)
-          │              │ -app (AppKit)      │          │ copy by job task
-          │              └────────┬───────────┘          ▼
-          │                       │ chat          review_state_uc (Delta, UC)
-          │                       ▼                       │
-          │       fe-bar-appeals-chat (ResponsesAgent)    │
-          │                                               ▼
-          └────────────────────────────────►  appeals_metrics (metric view)
-                                              + gold + appeals_output + eval_summary
-                                                          │
-                                                          ▼
-                                          Genie Agent "FE Bar – Medical Necessity Appeals"
+The detailed architecture from the deck (slide 8): sources, the Databricks platform layers, and the teams and outcomes each layer serves.
 
-  eval: pipeline/60_evaluate.py joins eval_case_labels (never sent to the model)
-        → eval_results, eval_summary
+![Reference architecture: sources, Lakeflow, Mosaic AI, Unity Catalog, Lakehouse + Lakebase, serving surfaces, teams and outcomes](docs/deck/architecture_reference.png)
 
-  genai eval: pipeline/65_genai_evaluate.py replays stored outputs as MLflow traces
-        → LLM judge (databricks-claude-sonnet-4-6): groundedness, no fabricated evidence,
-          quote checks, label match → genai_eval_results, genai_eval_summary
+### 3.2 Data flow by FE Bar stage
 
-  governance: column masks mask_phi / mask_phi_ts on appeals_output, data_sheet_facts, encounter_grounding
+One path from synthetic sources to a reviewer's approval, with the review loop back through Lakebase into Unity Catalog and Genie. Table- and task-level detail for each stage is in §2.
+
+```mermaid
+flowchart LR
+  SRC["<b>Sources</b><br/>synthetic claims + notes<br/>public payer + CMS references"]
+  LF["<b>1 · Lakeflow</b><br/>Auto Loader + SDP<br/>bronze → silver → gold<br/>expectations · 12-task job"]
+  UC["<b>2 · Unity Catalog</b><br/>gold worklist · 500 encounters<br/>PHI tags · masks · lineage"]
+  AI["<b>3 · ML / GenAI</b><br/>grounding + deterministic data sheet<br/>ai_query: WARRANTED, NOT WARRANTED<br/>or NEEDS REVIEW<br/>MLflow LLM judge"]
+  LB["<b>4 · Lakebase</b><br/>synced worklist<br/>append-only reviewer actions"]
+  GN["<b>5 · Genie Agent</b><br/>metric view + Genie space<br/>AI/BI cost dashboard"]
+  APP["<b>6 · Databricks App</b><br/>worklist · case file · PDFs<br/>chat agent + Genie sidebar"]
+  CHAT["Chat agent<br/>LangGraph · Vector Search<br/>Model Serving"]
+  HUMAN(("Reviewer<br/>approves<br/>every letter"))
+
+  SRC --> LF --> UC --> AI --> LB --> APP --> HUMAN
+  AI -.-> CHAT -.-> APP
+  APP -->|reviewer actions| LB
+  LB -->|review state back to UC| GN
+  UC --> GN
+  GN --> APP
+
+  classDef stage fill:#eef4fb,stroke:#1b3139,color:#1b3139
+  classDef ai fill:#fff3ec,stroke:#ff3621,color:#1b3139
+  classDef human fill:#e8f5e9,stroke:#2e7d32,color:#1b3139
+  class SRC,LF,UC,LB,GN,APP stage
+  class AI,CHAT ai
+  class HUMAN human
 ```
 
-### 3.2 Job DAG (`fe-bar-appeals-job`, defined in `resources/fe_bar_appeals.job.yml`)
+### 3.3 Job DAG (`fe-bar-appeals-job`, defined in `resources/fe_bar_appeals.job.yml`)
 
-```
- bootstrap ───────────────────────────────────────────────┐
- generate_raw_data ─► sdp_pipeline ─► grounding ◄─────────┘ (also needs bootstrap)
-                                         │
-                       ┌─────────────────┼──────────────────────────┐
-                       ▼                 ▼                          │
-                data_sheet_facts   generate_appeals ─┬─► register_tools (bootstrap re-run)
-                       │                 │           ├─► evaluate ─► genai_evaluate
-                       │                 │           ├─► cost_views (cost-dashboard views; also needs bootstrap)
-                       └────────┬────────┘           │
-                                ▼                    │
-                           render_pdfs ◄─────────────┘ (after generate_appeals)
-                                │
-                                ▼
-                           lakebase_sync
+Generated from the job definition (task keys, task types and `depends_on`), so it matches what the bundle deploys.
+
+```mermaid
+flowchart LR
+  bootstrap["bootstrap<br/>notebook"]
+  generate_raw_data["generate_raw_data<br/>notebook"]
+  sdp_pipeline["sdp_pipeline<br/>SDP pipeline"]
+  grounding["grounding<br/>SQL"]
+  data_sheet_facts["data_sheet_facts<br/>SQL"]
+  generate_appeals["generate_appeals<br/>SQL"]
+  register_tools["register_tools<br/>notebook"]
+  render_pdfs["render_pdfs<br/>notebook"]
+  lakebase_sync["lakebase_sync<br/>notebook"]
+  evaluate["evaluate<br/>notebook"]
+  genai_evaluate["genai_evaluate<br/>notebook"]
+  cost_views["cost_views<br/>SQL"]
+  generate_raw_data --> sdp_pipeline
+  sdp_pipeline --> grounding
+  bootstrap --> grounding
+  grounding --> data_sheet_facts
+  grounding --> generate_appeals
+  generate_appeals --> register_tools
+  generate_appeals --> render_pdfs
+  data_sheet_facts --> render_pdfs
+  render_pdfs --> lakebase_sync
+  generate_appeals --> evaluate
+  evaluate --> genai_evaluate
+  bootstrap --> cost_views
+  generate_appeals --> cost_views
 ```
 
 - The job has 12 tasks. `genai_evaluate` (`pipeline/65_genai_evaluate.py`) runs after `evaluate`, and `cost_views` refreshes the cost-dashboard views. The three 10-task runs in `evidence/08_job_run.md` predate both.
@@ -170,7 +167,7 @@ One hero claim runs through all six stages. The claim is **Elena Marquez** (fict
 - The schedule is a daily cron at 04:00 America/Phoenix, **PAUSED** to control cost.
 - The job runs the repo's own code. The older UI-built job in the earlier prototype is not used.
 
-### 3.3 Auth model
+### 3.4 Auth model
 
 | Path | Identity | Why |
 |---|---|---|
@@ -379,6 +376,6 @@ tools/                          run_sql.py helper (parameterised SQL)
 data/SOURCES.md                 public references and appeal-window sources
 docs/                           SPEC, FINDINGS, STAKEHOLDERS, CUSTOMER_CONTEXT, SESSION_LOG,
                                 business_case/ (model, sources, cost checkpoints, DECK_NUMBERS),
-                                deck/ (DECK.md text map, deck PDF, architecture slide spec)
+                                deck/ (DECK.md text map, deck PDF, architecture slide image + spec)
 evidence/                       execution evidence as text, indexed in evidence/EVIDENCE.md
 ```
