@@ -1,18 +1,43 @@
 # Medical-necessity appeals on Databricks: FE Bar build
 
-**About this repo.** This build extends my earlier appeals prototype. It is a new repository. The private repo `naveen-sangana_data/med-nec-appeals-fe-bar` has the full history. The public mirror `nsangana/med-nec-appeals-fe-bar` holds snapshots of the final tree without the private history. It builds in a new schema, `appeals_hackathon_catalog.fe_bar_appeals`, under new resource names (`fe-bar-appeals-*`). The earlier schema, job, endpoint and app were not modified and are not referenced here.
-
-**Scope.** Synthetic data only. Public reference documents only. Every prototype metric is labelled "prototype, synthetic data". Stage names follow the FE Bar: Lakeflow, Unity Catalog, Lakebase, ML/GenAI, Genie Agent, Databricks App.
-
----
-
 ## 1. Business outcome
 
-**$2M–$4M a year of earned revenue recovered at about 50 cents an appeal — paying back the pilot within a quarter, even at the floor.**
+> **Recover legitimate healthcare revenue, prevent avoidable write-offs and reduce the administrative burden of medical necessity appeals through timely, clinically grounded, AI-assisted appeal preparation.**
+>
+> **Expected value, to be validated in a pilot:** $2M–$4M a year of earned revenue recovered (Floor to Likely), paying back the pilot within a quarter, even at the floor.
 
-A large multi-state nonprofit health system (HQ Arizona) denies some medical-necessity claims (CARC CO50, CO55, CO57, CO150, CO186) after service. Many of those denials are legitimate and appealable, and they go unfiled or unwon because each appeal is rebuilt by hand from three sources. This build decides, per denial, whether the clinical record supports an appeal. If it does, it drafts a letter with dated citations for a person to approve. If the evidence is missing or conflicting, it routes the case to NEEDS REVIEW and drafts nothing. Payer submission is not implemented.
+### 1.1 The business problem
 
-**Value tiers** (annual incremental recovery; `docs/business_case/DECK_NUMBERS.md` §1, §3, §6)
+A large, multi-state nonprofit health system headquartered in Arizona faces potential revenue leakage when payers deny reimbursement for care already delivered, citing medical necessity. Even when clinical documentation supports the care provided, eligible claims may go unrecovered due to missed appeal deadlines, incomplete supporting evidence and the manual effort required to prepare appeals.
+
+### 1.2 The business objective
+
+The business objective is to recover legitimate reimbursement, reduce avoidable write-offs, accelerate denial resolution and reduce the administrative burden on revenue cycle and clinical teams, while advocating for patients whose medically necessary care has been denied coverage.
+
+### 1.3 What the solution does
+
+The solution evaluates each denial against the patient's clinical record and applicable payer criteria to determine whether an appeal is warranted. When sufficient evidence exists, it generates a clinically grounded appeal letter with dated citations for human review and approval. Cases with insufficient or conflicting evidence are routed for further review without generating an appeal.
+
+The current implementation supports appeal determination and preparation. Payer submission remains outside its scope.
+
+### 1.4 Expected measurable business outcomes
+
+| Business outcome | Success metric | Where it stands today |
+|---|---|---|
+| Revenue recovery | Incremental annual reimbursement recovered | Model: $2.17M (Floor) to $4.33M (Likely) a year; expected benefit, validated in the pilot (`docs/business_case/MODEL.md`) |
+| Revenue leakage prevention | Reduction in avoidable claim write-offs | Pilot measure: write-offs on the pilot payer and code, baseline vs pilot window of equal length |
+| Timely appeals | Percentage of eligible appeals prepared before filing deadlines | Prototype: the worklist ranks denials by expected dollars × deadline risk and flags NEW and AT_RISK cases first; the percentage is a pilot measure |
+| Operational efficiency | Reduction in appeal preparation time | Not measured in the prototype; the pilot times preparation per appeal |
+| Workforce productivity | Administrative and clinical hours saved | Model: about 1,832 admin hours a year, roughly 1.0 FTE, at Floor and Likely (`DECK_NUMBERS.md` §3) |
+| Financial performance | Reduction in cost per appeal | Model at Floor: about $57 labour per appeal before, about $29 after (labour + platform). Platform cost: $1.30 (Floor) / $1.05 (Likely) per appeal at health-system scale; $0.51 measured on the prototype |
+| Patient advocacy | Reduction in avoidable patient financial liability, where applicable | Pilot measure; the prototype makes no patient-outcome claim |
+| Clinical integrity | Percentage of appeal determinations supported by clinical evidence | Prototype, synthetic data: 98.3% groundedness and 96.7% no fabricated evidence (LLM judge, 60 rows); 97.2% agreement with designed labels and 0% unsafe calls (180 rows) |
+
+**Patient advocacy, not clinical outcomes.** The build addresses post-service denials, so its patient benefit is financial protection: less avoidable patient financial liability and a better billing experience. It makes no clinical-outcome claims. Revenue recovery is an expected benefit until a production pilot validates it.
+
+### 1.5 The value case
+
+Annual incremental recovery by tier (`docs/business_case/DECK_NUMBERS.md` §1, §3, §6). The headline range is Floor to Likely on the top-down method. The bottom-up cross-check is lower and is shown, not hidden.
 
 | Tier | Top-down, $M/yr | Bottom-up cross-check, $M/yr | What drives the tier |
 |---|---|---|---|
@@ -20,25 +45,24 @@ A large multi-state nonprofit health system (HQ Arizona) denies some medical-nec
 | **Likely** | 4.33 | 1.16 | Floor × 2.0 dollar weighting. **The 2.0× is an assumption, not sourced.** |
 | **Ceiling** | 8.65 | 9.74 | Top of sourced rates. The bottom-up Ceiling also uses an unsourced 85% improved appeal rate (`docs/business_case/MODEL.md`). |
 
-The headline range is Floor to Likely on the top-down method. The bottom-up method is lower and is shown, not hidden.
-
 **Caveats that travel with the numbers**
 - **Likely depends on the 2.0× multiplier.** At 1.5× the top-down Likely is $3.25M; at 3.0× it is $6.50M (DECK_NUMBERS §1).
 - **Bottom-up does not converge with top-down in the Likely case.** Its Floor and Likely are both $1.16M. The gap comes from the $465 average denied amount.
-- **Payback and ROI use placeholder costs.** One-time implementation is $216K (Floor) or $144K (Likely and Ceiling). Annual run cost is $90K or $60K. Both are assumptions to validate with the health system's RCM. At Floor, payback is 1.3 months top-down and 2.5 months bottom-up, and both include the one-time cost. The 20.2× top-down figure is net benefit ÷ annual cost ("annual return on run cost"). It excludes the one-time cost. Year-1 return including the pilot at Floor is about 6×.
-- **Cost per appeal is measured at prototype scale.** $0.11 variable and $0.51 fully loaded at 60 appeals per day, at list price, not the health system's contracted rates (`evidence/10_cost_per_appeal.md`).
-- **The $12.8M reference figure is a placeholder, not a result.** At Floor rates it would need a 5.9× dollar multiplier. The model does not support it.
-- **Capacity is context, not the headline.** About 1,832 admin hours a year, roughly 1.0 FTE, at Floor and Likely (DECK_NUMBERS §3).
+- **Payback and returns use placeholder costs.** The one-time pilot and implementation cost is $216K (Floor) or $144K (Likely and Ceiling); annual run cost is $90K or $60K. Both are assumptions to validate with the health system's revenue cycle team. At Floor, payback is 1.3 months top-down and 2.5 months bottom-up, both after the one-time cost. The 20.2× top-down figure is net benefit ÷ annual cost ("annual return on run cost") and excludes the one-time cost; the year-1 return including the pilot at Floor is about 6×.
+- **Cost per appeal is platform cost, at list price.** About $1 at health-system scale ($1.30 Floor, $1.05 Likely, `DECK_NUMBERS.md` §3); $0.51 fully loaded and $0.11 variable measured on the prototype at 60 appeals a day (`evidence/10_cost_per_appeal.md`). Both exclude people cost and the health system's contracted rates.
+- **The $12.8M starting hypothesis is a placeholder, not a result.** At Floor rates it would need a 5.9× dollar multiplier. The model does not support it.
 
-**Patient impact** is limited to patient financial liability and billing experience. This build makes no clinical-outcome claims.
+### 1.6 What the prototype has proven (synthetic data only)
 
-**Who it serves** (roles, per `docs/STAKEHOLDERS.md`): VP of Revenue Cycle (domain owner), Chief Data & AI Officer (technical stakeholder), CFO (executive sponsor), and Director of Denial Management (operational owner).
+On 180 generated encounters, the determination matches the designed label 97.2% of the time (175 of 180). It made no unsafe WARRANTED call (0.0%). All five misses went to NEEDS REVIEW, which is the safe direction (`evidence/11_eval_180.md`). The end-to-end job ran three times in a row, 10 of 10 tasks each time, growing the worklist from 60 to 120 to 180 appeals without regenerating finished ones (`evidence/08_job_run.md`). The eval measures agreement with designed labels. It does not measure payer overturn rates.
 
-**Proposed next step.** A 90-day pilot on one payer and one denial code (BCBS of Arizona commercial, CO50), with baseline and pilot windows of equal length. Pilot cost is not in this build; it is to be scoped with the health system (`docs/deck/DECK.md`, slides 11–12).
+### 1.7 Who it serves and the next step
 
-**Deck.** Deck v2, "Automate the Appeal. Recover the Revenue.", is on the Databricks template. It has a 12-slide main story (slide 7 is the platform overview, slide 8 the detailed reference architecture) and seven appendix slides. The PDF is `docs/deck/FE_Bar_Medical_Necessity_Appeals_POV.pdf`. The slide-by-slide text map and figure sources are in `docs/deck/DECK.md`.
+**Stakeholders** (roles, per `docs/STAKEHOLDERS.md`): CFO (executive sponsor), VP of Revenue Cycle (domain owner), Director of Denial Management (operational owner) and Chief Data & AI Officer (technical stakeholder).
 
-**What the prototype proves (synthetic data only).** On 180 generated encounters, the determination matches the designed label 97.2% of the time (175 of 180). It made no unsafe WARRANTED call (0.0%). All five misses went to NEEDS REVIEW, which is the safe direction (`evidence/11_eval_180.md`). The end-to-end job ran three times in a row, 10 of 10 tasks each time, growing the worklist from 60 to 120 to 180 appeals without regenerating finished ones (`evidence/08_job_run.md`). The eval measures agreement with designed labels. It does not measure payer overturn rates.
+**Proposed next step.** A 90-day pilot on one payer and one denial code (BCBS of Arizona commercial, CO50), with baseline and pilot windows of equal length, measuring the outcomes in 1.4. Pilot cost is a placeholder in this build ($144K–$216K for 12 weeks, the one-time cost behind the payback figures), to be scoped with the health system (`docs/deck/DECK.md`, slides 11–12).
+
+**Deck.** The executive deck, "Automate the Appeal. Recover the Revenue." (`docs/deck/FE_Bar_Medical_Necessity_Appeals_POV.pdf`), tells this story in a 12-slide main section plus seven appendix slides; figure sources per slide are in `docs/deck/DECK.md`.
 
 ---
 
@@ -76,14 +100,14 @@ One hero claim runs through all six stages. The claim is **Elena Marquez** (fict
 - `public.review_state` gives the latest status per encounter. For the hero, that is APPROVE then SUBMIT (simulated), with `deadline_met = t`.
 - Source: `evidence/03_lakebase.md`.
 
-**Stage 5: back to Unity Catalog.** The review state is copied into the Delta table `review_state_uc`, using the UC catalog `fe_bar_appeals_lakebase`. Genie and the metric view can then query it (4 rows at the latest sync; simulated). Source: `evidence/03_lakebase.md`, `evidence/08_job_run.md`.
+**Review loop: back to Unity Catalog.** The review state is copied into the Delta table `review_state_uc`, using the UC catalog `fe_bar_appeals_lakebase`. Genie and the metric view can then query it (4 rows at the latest sync; simulated). Source: `evidence/03_lakebase.md`, `evidence/08_job_run.md`.
 
-**Stage 6: Genie Agent (natural-language access).**
+**Stage 5: Genie Agent (natural-language access).**
 - The Genie Agent space "FE Bar – Medical Necessity Appeals" (`01f1e7ec913217158b231c3e2f18fa20`) uses five objects: the metric view `appeals_metrics`, `appeals_output`, `eval_summary`, `gold_denial_worklist` and `review_state_uc`.
 - `appeals_metrics` defines appealable revenue, revenue at deadline risk, revenue lost to deadline, warranted rate, NEEDS REVIEW rate, approval rate and cost per appeal.
 - 14 of 14 benchmark questions passed, grouped by stakeholder role. One of them is "What is the status of the claim for Elena Marquez?" The 2026-11-25 re-run on the 180-row state passes all 14 (`evidence/07_genie.md`).
 
-**Stage 7: Databricks App (business surface).** `fe-bar-appeals-app` (AppKit). The worklist is sorted with NEW first, then priority, and carries NEW, AT_RISK and PAST_DUE tags. Recommendation chips show a count for each outcome. A "≥ $10K expected" toggle and an expected-$ sort narrow the list. The case file opens the letter, the data sheet and the AI worksheet together. The edited letter has a preview with "Show changes" and a PDF download in the browser. A full-height assistant sidebar holds the chat agent (`fe-bar-appeals-chat`, a LangGraph `ResponsesAgent` over UC functions and the VS index) and the Genie tab. Reviewers can take actions (`evidence/06_app.md`, `evidence/09_chatbot.md`).
+**Stage 6: Databricks App (business surface).** `fe-bar-appeals-app` (AppKit). The worklist is sorted with NEW first, then priority, and carries NEW, AT_RISK and PAST_DUE tags. Recommendation chips show a count for each outcome. A "≥ $10K expected" toggle and an expected-$ sort narrow the list. The case file opens the letter, the data sheet and the AI worksheet together. The edited letter has a preview with "Show changes" and a PDF download in the browser. A full-height assistant sidebar holds the chat agent (`fe-bar-appeals-chat`, a LangGraph `ResponsesAgent` over UC functions and the VS index) and the Genie tab. Reviewers can take actions (`evidence/06_app.md`, `evidence/09_chatbot.md`).
 
 **Demo path for the hero.** Worklist (rank 1, AT_RISK, 9 days) → case file → letter and data sheet → Approve → Submit (simulated) → Genie question on the claim's status → chat question on the evidence.
 
@@ -282,7 +306,7 @@ I also pushed back on the business case and presentation. I treated the original
 
 The final prototype reports 97.2% accuracy across 180 synthetic appeals, no unsafe calls, 98.3% LLM-judged groundedness, 96.7% no-fabrication performance and 14 of 14 Genie benchmark answers. Measured cost is `$0.11` variable and about `$0.51` fully loaded per appeal at 60 per day. The current code passes 202 Python tests and 73 application tests. These are prototype results on synthetic data, not payer outcomes or realized revenue.
 
-The evidence for how I worked is in [`docs/PROMPT_LOG.md`](docs/PROMPT_LOG.md), [`docs/STEERING_LOG.md`](docs/STEERING_LOG.md) and [`evidence/00_LIFECYCLE.md`](evidence/00_LIFECYCLE.md). The Claude Code session ID is `e2e3204c-874a-4e35-bf06-2aa699e64087`.
+The evidence for how I worked is in [`docs/PROMPT_LOG.md`](docs/PROMPT_LOG.md), [`docs/STEERING_LOG.md`](docs/STEERING_LOG.md) and [`evidence/00_LIFECYCLE.md`](evidence/00_LIFECYCLE.md). The Claude Code session IDs are `e2e3204c-874a-4e35-bf06-2aa699e64087` (the build) and `b0cc9995-d83b-4627-b4ee-eed4b81318ec` (bundle parameterization, the clean run, and the final README and deck passes).
 
 I did not use another FE's submission or another person's code for this submission.
 
@@ -314,6 +338,14 @@ I did not use another FE's submission or another person's code for this submissi
 - Cost figures are list price, this workspace's usage only. Warehouse and pipeline shares are allocations.
 - The appeal windows rest on public regulations, with the caveats above. The BCBS criteria file is a secondary summary; its underlying AZ Blue sources are cited in `data/SOURCES.md`.
 - The hero's letter is in the repo only as an excerpt. The full letter and data-sheet PDFs are not committed.
+
+---
+
+## About this repo
+
+**About this repo.** This build extends my earlier appeals prototype. It is a new repository. The private repo `naveen-sangana_data/med-nec-appeals-fe-bar` has the full history. The public mirror `nsangana/med-nec-appeals-fe-bar` holds snapshots of the final tree without the private history. It builds in a new schema, `appeals_hackathon_catalog.fe_bar_appeals`, under new resource names (`fe-bar-appeals-*`). The earlier schema, job, endpoint and app were not modified and are not referenced here.
+
+**Scope.** Synthetic data only. Public reference documents only. Every prototype metric is labelled "prototype, synthetic data". Stage names follow the FE Bar: Lakeflow, Unity Catalog, Lakebase, ML/GenAI, Genie Agent, Databricks App.
 
 ---
 

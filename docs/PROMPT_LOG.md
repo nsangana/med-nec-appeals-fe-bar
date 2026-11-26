@@ -1,6 +1,6 @@
 # Prompt log — how I directed the AI (curated)
 
-Built with Claude Code orchestrating parallel sub-agents, and Isaac for building and reviewing the solution and the Google Slides deck (session `e2e3204c-874a-4e35-bf06-2aa699e64087`).
+Built with Claude Code orchestrating parallel sub-agents, and Isaac for building and reviewing the solution and the Google Slides deck (sessions `e2e3204c-874a-4e35-bf06-2aa699e64087` for the build and `b0cc9995-d83b-4627-b4ee-eed4b81318ec` for the bundle, clean run and final passes).
 These are curated excerpts from my prompts. They are shortened where indicated (…), with spelling corrected and
 customer or individual names redacted; the meaning is unchanged. Where I combined or materially reworded several
 messages, the entry is marked *(paraphrase)* and is not in quotation marks.

@@ -14,9 +14,9 @@ Text map of the v2 Google Slides deck (FE Bar POV), on the Databricks template. 
 
 | # | Title | Role in arc |
 |---|---|---|
-| 1 | Automate the Appeal. Recover the Revenue. | Cover (presenter: Naveen Sangana, Sr. Solutions Architect, Databricks) |
+| 1 | Automate the Appeal. Recover the Revenue. | Cover: subtitle is the one-line business outcome (presenter: Naveen Sangana, Sr. Solutions Architect, Databricks) |
 | 2 | Agenda: how a daily worklist recovers revenue already earned | Agenda (6 items) |
-| 3 | $2M–$4M a year of earned revenue, at about 50¢ an appeal | Stakes: value headline |
+| 3 | An expected $2M–$4M a year of earned revenue, paying back the pilot within a quarter | Stakes: value headline |
 | 4 | Every revenue-cycle leader's scorecard moves when appeals are filed on time | Stakes: scorecards by role |
 | 5 | Today, each appeal is rebuilt by hand from three systems, and deadlines slip | Problem + hero intro (fictional patient, CO50, $24,850, 9 days) |
 | 6 | Each morning, new denials arrive with a letter ready for approval | Workflow + hero thread (ranked #1) |

@@ -143,9 +143,10 @@ Source: `evidence/14_mlflow_genai_eval.md` (job run `263358598052015`, judge `da
 
 ## 7. Headline (current)
 
-- **Headline:** "$2M–$4M a year of earned revenue recovered at about 50 cents an appeal — paying back the pilot within a quarter, even at the floor."
+- **Business outcome (cover subtitle, set by Naveen 2026-11-26):** "Recover legitimate healthcare revenue, prevent avoidable write-offs and reduce the administrative burden of medical necessity appeals through timely, clinically grounded, AI-assisted appeal preparation."
+- **Headline (value slide):** "An expected $2M–$4M a year of earned revenue, paying back the pilot within a quarter." The per-appeal cost is no longer in the headline: $0.51 is platform cost only, and reviewer time to approve and file is separate (Naveen, 2026-11-26).
 - Support for "within a quarter": top-down payback 1.3 months and bottom-up 2.5 months at Floor (section 1b). Any multiple is labelled "annual return on run cost" (net ÷ annual cost, excludes the one-time cost). Year-1 return including the pilot at Floor is about 6×. Do not present 20.2× as a return on the pilot.
 - Basis: $2.17M (Floor, top-down) to $4.33M (Likely, top-down) per year; $0.51 per appeal (prototype fully loaded, 60/day, COST_2B); 20.2× annual return on run cost, top-down, at Floor (Model row 37).
 - The tier table shows **Ceiling $8.65M** (top-down, sourced upside rates) and **bottom-up as a lower cross-check** (Floor and Likely $1.16M; Ceiling $9.74M). Show both, with the bottom-up cross-check in the table, not hidden.
 - Caveats that must travel with the headline: the Likely $4.33M depends on the unsourced 2.0x dollar multiplier (sensitivity $3.25M at 1.5x and $6.50M at 3.0x). Payback and ROI rest on placeholder implementation and run costs. Cost per appeal is prototype list-price, not the health system contracted rates.
-- Cost per appeal: **$0.51** (prototype, 60/day) is the deck figure. The health-system-scale model's $1.05 (Likely) is for the model only.
+- Cost per appeal: **$0.51** (prototype, 60/day) is the deck figure, always labelled **platform cost per appeal**; it excludes reviewer time. The health-system-scale model's $1.30 (Floor) / $1.05 (Likely) are platform cost for the model; labour plus platform is about $57 → $29 per appeal at Floor (§3).
