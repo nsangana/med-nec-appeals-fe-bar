@@ -54,7 +54,7 @@ Text map of the v2 Google Slides deck (FE Bar POV), on the Databricks template. 
 | 14 | Job graph (main path of the 12-task job); stage table; 32 PHI-tagged columns; 60 per run | resources/fe_bar_appeals.job.yml; evidence/01, 02, 04, 06, 07, 08, 09 |
 | 15 | PHI masks on 7 columns; reviewer grants pending; model data-use item | evidence/02, evidence/13, lakebase/APP_GRANTS.md, lakebase/AUTH.md, data/SOURCES.md |
 | 16 | Rows in/out per layer; six drops; two warnings | evidence/01 (update 7642a160…) |
-| 17 | 180 of 460; 5 misclassified; criteria gap; no clinician review | evidence/11_eval_180.md; MODEL.md open issues |
+| 17 | 180 of 450; 5 misclassified; criteria gap; no clinician review | evidence/11_eval_180.md; MODEL.md open issues |
 | 18 | Tiers and returns; five inputs; exclusions; weighting $3.25M–$6.50M | DECK_NUMBERS §1, §2; MODEL.md (a)–(c), (g) |
 | 19 | Source list and status | docs/business_case/SOURCES.md; DECK_NUMBERS §4, §5 |
 
