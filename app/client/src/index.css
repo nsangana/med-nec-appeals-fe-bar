@@ -40,6 +40,31 @@
   --sidebar-ring: oklch(0.705 0.015 286.067); */
 }
 
+/* Print-to-PDF for the final letter. The hidden copy is a body-level sibling (see LetterTab); when printing,
+   only that copy is shown, so the PDF is just the letter. */
+#final-letter-print {
+  display: none;
+}
+
+@media print {
+  /* Radix scroll lock sets body overflow hidden while the dialog is open; let a long letter span pages. */
+  html,
+  body {
+    height: auto !important;
+    overflow: visible !important;
+  }
+  body > :not(#final-letter-print) {
+    display: none !important;
+  }
+  #final-letter-print {
+    display: block !important;
+    position: static;
+  }
+  @page {
+    margin: 0.9in;
+  }
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     /* --background: oklch(0.141 0.005 285.823);

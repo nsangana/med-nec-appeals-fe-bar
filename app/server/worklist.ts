@@ -125,9 +125,15 @@ SELECT
   COALESCE(SUM(expected_reimbursement) FILTER (WHERE recommendation = 'WARRANTED'), 0)::float8 AS warranted_expected
 FROM fe_bar_appeals.worklist_serving`;
 
-/** Latest EDIT for a case (its edited letter), plus the last 20 review actions. $1..$3 = key. */
+/** Latest EDIT for a case (its edited letter) and the edit count as `version` (the latest edit is version N).
+ *  $1..$3 = key. Read-only: the count is a subquery over the same append-only table. */
 export const LATEST_EDIT_SQL = `
-SELECT edited_letter, reviewer, created_at::text AS created_at
+SELECT
+  edited_letter,
+  reviewer,
+  created_at::text AS created_at,
+  (SELECT COUNT(*) FROM public.review_actions
+    WHERE facility_id = $1 AND patient_control_number = $2 AND encounter_nbr = $3 AND action = 'EDIT')::int AS version
 FROM public.review_actions
 WHERE facility_id = $1 AND patient_control_number = $2 AND encounter_nbr = $3 AND action = 'EDIT'
 ORDER BY created_at DESC, id DESC
@@ -241,7 +247,12 @@ export function toSummary(row: Row | undefined) {
 
 export function toLatestEdit(row: Row | undefined) {
   if (!row) return null;
-  return { edited_letter: text(row.edited_letter), reviewer: text(row.reviewer), created_at: text(row.created_at) };
+  return {
+    edited_letter: text(row.edited_letter),
+    reviewer: text(row.reviewer),
+    created_at: text(row.created_at),
+    version: num(row.version) ?? 0,
+  };
 }
 
 export function toHistory(rows: Row[]) {

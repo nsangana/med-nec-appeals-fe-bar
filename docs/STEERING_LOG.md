@@ -29,6 +29,7 @@ Customer = a fictional, anonymized large multi-state nonprofit health system. Pe
 | 18 | Asked "is my build ready? would you change the architecture?" then chose to harden: **column masks, quote metric, MLflow tracing + eval** | AI ranked value-for-effort options | 7 PHI masks; `genai_evaluate` task with LLM judge; per-quote metrics |
 | 19 | (Orchestrator caught, builder accepted) judge context must mirror the generation prompt | First judge run showed 83.3% groundedness | Judge sees what the model saw → 98.3%; drift test added |
 | 20 | Wanted the evidence to show how the AI was steered (this file) | — | `docs/STEERING_LOG.md`, referenced from README §6 |
+| 21 | Questioned the value of letter edits that don't update the PDF, and the chat/Genie panel needing a scroll to type; weighed effort vs demo impact and chose the no-new-permission option | Edited letter shown as a formatted preview with version chip, word-level "show changes" vs the AI draft, browser-generated final-letter PDF, "Approve version N"; sticky viewport-height chat/Genie panel with pinned input. Server-written PDFs deferred to the pilot (would need a volume write grant) |
 
 ## B. Business case
 

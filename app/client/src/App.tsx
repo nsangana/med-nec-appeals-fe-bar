@@ -129,18 +129,21 @@ export default function App() {
             </CardContent>
           </Card>
 
-          <div className="h-[560px] lg:sticky lg:top-6 lg:h-[calc(100vh-8rem)]">
+          {/* Sticky, viewport-height column (1440x900: top 24px + 852px height ends above the fold).
+              Message lists scroll inside; the composer stays pinned at the bottom of the panel. */}
+          <div className="h-[560px] lg:sticky lg:top-6 lg:h-[calc(100vh-3rem)]">
             {genieEnabled ? (
-              <Tabs defaultValue="agent" className="flex h-full flex-col">
-                <TabsList>
+              <Tabs defaultValue="agent" className="flex h-full min-h-0 flex-col">
+                <TabsList className="shrink-0">
                   <TabsTrigger value="agent">Appeals agent</TabsTrigger>
                   <TabsTrigger value="genie">Genie</TabsTrigger>
                 </TabsList>
-                <TabsContent value="agent" className="min-h-0 flex-1">
+                <TabsContent value="agent" className="mt-2 flex min-h-0 flex-1 flex-col">
                   <ChatPane context={context} onClearContext={() => setContext(null)} />
                 </TabsContent>
-                <TabsContent value="genie" className="min-h-0 flex-1">
-                  <GenieChat alias="default" />
+                <TabsContent value="genie" className="mt-2 flex min-h-0 flex-1 flex-col">
+                  {/* GenieChat's root is flex-col h-full; it fills this column and its input is shrink-0. */}
+                  <GenieChat alias="default" className="min-h-0 flex-1 overflow-hidden rounded-lg border bg-card" />
                 </TabsContent>
               </Tabs>
             ) : (

@@ -3,12 +3,14 @@ import {
   CaseKeySchema,
   ReviewActionBodySchema,
   WorklistQuerySchema,
+  LATEST_EDIT_SQL,
   buildWorklistQuery,
   likePattern,
   pdfUrl,
   reviewActionAllowed,
   reviewStatusLabel,
   searchPattern,
+  toLatestEdit,
   toWorklistItem,
   volumeFileName,
 } from './worklist';
@@ -167,5 +169,25 @@ describe('row mapping', () => {
     expect(reviewStatusLabel(null)).toBe('Not started');
     expect(reviewStatusLabel('ROUTE_TO_REVIEW')).toBe('Routed to review');
     expect(reviewStatusLabel('SUBMIT')).toBe('Submitted');
+  });
+});
+
+describe('latest edit (edit version)', () => {
+  it('reports the edit count as version N for the latest saved edit', () => {
+    expect(
+      toLatestEdit({ edited_letter: 'v2 text', reviewer: 'a@example.test', created_at: '2026-11-25 10:00:00+00', version: '2' }),
+    ).toEqual({ edited_letter: 'v2 text', reviewer: 'a@example.test', created_at: '2026-11-25 10:00:00+00', version: 2 });
+  });
+
+  it('is null with no edit and never reports a negative or missing version', () => {
+    expect(toLatestEdit(undefined)).toBeNull();
+    expect(toLatestEdit({ edited_letter: 'x' })?.version).toBe(0);
+  });
+
+  it('counts EDIT events only, scoped to the same key, and reads without writing', () => {
+    expect(LATEST_EDIT_SQL).toMatch(/COUNT\(\*\)/);
+    expect(LATEST_EDIT_SQL).toMatch(/action = 'EDIT'/);
+    expect(LATEST_EDIT_SQL).not.toMatch(/\b(INSERT|UPDATE|DELETE)\b/i);
+    expect(LATEST_EDIT_SQL).toMatch(/\$1[\s\S]*\$2[\s\S]*\$3/);
   });
 });

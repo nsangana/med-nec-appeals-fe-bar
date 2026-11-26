@@ -120,3 +120,27 @@ Not wired. Set `DATABRICKS_GENIE_SPACE_ID` and add the `genie-space` resource to
 - Chat returned 403 (app SP had no CAN_QUERY): bound `serving-endpoint` resource fe-bar-appeals-chat CAN_QUERY; app.yaml `DATABRICKS_SERVING_ENDPOINT_NAME` valueFrom serving-endpoint; redeployed.
 - Follow-up: still Forbidden after adding `genie`, because "Apps that are already running continue to run with their existing scopes" (Databricks Apps auth docs). Removed deprecated `dashboards.genie`, kept `genie`, redeployed (deployment `01f1e7f715241614b4c14e7c694b059e` SUCCEEDED). Effective scopes: files, genie, iam.access-control:read, iam.current-user:read, model-serving, sql.
 - Genie auth decision (Naveen, 2026-11-24): the forwarded user token still lacked `genie` after scope update + redeploy + fresh session, so the Genie tab now runs as the **app service principal**. `server/server.ts` subclasses the AppKit Genie plugin (same routes/SSE/<GenieChat> contract, no `asUser` wrapper). SP grants: SELECT on the 5 space objects + USE CATALOG/SCHEMA (`governance/04_app_sp_genie_grants.sql`, verified with SHOW GRANTS); CAN_RUN on the space via the genie-space resource. Typecheck/lint/22 tests/build pass; deployment `01f1e7fb1d38144b9945d132b923a60e` SUCCEEDED. Trade-off: Genie answers in the app reflect the app's access, not per-reviewer grants; worklist/review actions already run as the SP; PDFs + chat stay OBO.
+
+## UX update 2026-11-26
+
+**Letter editing is visible in the case file.** When a saved edit exists, the Letter tab shows the edited letter as a formatted preview by default, with a version chip ("Version N · edited by <reviewer> · <relative time>") and a toggle between "Original AI draft (PDF)" and "Edited letter". With no edit, the AI draft PDF shows as before.
+- **Preview:** markdown is parsed into plain blocks and rendered as React text nodes. No `dangerouslySetInnerHTML`, no HTML parsing, links keep their text only. Letter typography, a letterhead placeholder, and an RE block.
+- **Show changes:** word-level inline diff of the AI draft against the latest edit (dependency-free LCS), with added and removed words highlighted and a word count.
+- **Download final letter (PDF):** print-to-PDF of a body-level copy of the edited letter (no server write, no new permission). File name `<account>_<encounter>_letter_v<N>.pdf` (set as the document title for the print).
+- **Save edit** shows the new version immediately (optimistic), then re-reads the case. Approve and Submit say which version they apply to ("Approve version N", or "Approve AI draft" with no edit).
+- Data sheet and AI worksheet tabs are unchanged.
+
+**Agent and Genie panel.** The right-hand panel is sticky and viewport-height (`lg:sticky lg:top-6 lg:h-[calc(100vh-3rem)]`). The message list scrolls, the composer is pinned at the bottom, and the Genie tab's `<GenieChat>` fills the same column via `className`.
+
+**Server (read-only).** The latest-edit query returns `version`, a count of EDIT events for the same case. No Lakebase schema change, no new writes.
+
+**Tests.** `npm run typecheck`, `npm run lint`, `npm test` (54 passed; new tests for the parser, the version copy, the file name, the diff, and the version count), and `npm run build` all pass.
+
+**Deployment.** `01f1e9619d1b15709b260144b944edbb`, SUCCEEDED, app RUNNING. Logs show the server listening and no runtime errors. Files uploaded: `client/src/{App.tsx,index.css,components/{CaseFileDialog,ChatPane,LetterTab,LetterViews}.tsx,lib/{api,letterPreview,letterPreview.test,letterDiff,letterDiff.test}.ts}`, `server/{worklist,worklist.test}.ts`. No new dependencies.
+
+**Visual verification.** Not done. The app URL redirects to the Databricks SSO login, and the browser session was not signed in. Layout at 1440x900 has not been checked by eye.
+
+**Known limits.**
+- Diffs above ~6M table cells show the middle as one replacement, so the word count is coarse for very large rewrites.
+- The Approve/Submit actions do not record the version they applied to. That would need a schema change, which was out of scope.
+- Print file name depends on the browser using the document title for its default PDF name (Chrome and Safari do).

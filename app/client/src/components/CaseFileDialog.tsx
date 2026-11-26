@@ -30,6 +30,8 @@ import { formatCurrency, formatDate } from '../lib/formatters';
 import { RecommendationBadge } from './RecommendationBadge';
 import { parseReason } from '../lib/reason';
 import { firstRow, stringField } from '../lib/rows';
+import { approveLabel, submitLabel } from '../lib/letterPreview';
+import { LetterTab, type EditView, type LetterView } from './LetterTab';
 
 export interface CaseTarget {
   facility_id: string;
@@ -76,6 +78,12 @@ export function CaseFileDialog({
   const [busy, setBusy] = useState<ReviewActionName | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [lastResult, setLastResult] = useState<string | null>(null);
+  // Letter tab state. The preview shows the latest saved edit by default.
+  const [letterView, setLetterView] = useState<LetterView>('edited');
+  const [showChanges, setShowChanges] = useState(false);
+  // Shown the moment Save edit is clicked, before the re-read confirms it.
+  const [optimisticEdit, setOptimisticEdit] = useState<EditView | null>(null);
+  const [now, setNow] = useState<Date>(() => new Date());
 
   const keyParams = useMemo(
     () => ({
@@ -118,21 +126,50 @@ export function CaseFileDialog({
   const item = detail?.item;
   const status = lastResult ?? detail?.review.status_label ?? '';
 
+  // The saved edit (from Lakebase), or the optimistic copy while a save is in flight.
+  const latest = detail?.review.latest_edit ?? null;
+  const savedEdit: EditView | null = latest?.edited_letter
+    ? {
+        text: latest.edited_letter,
+        version: latest.version,
+        reviewer: latest.reviewer,
+        createdAt: latest.created_at,
+      }
+    : null;
+  const edit = optimisticEdit ?? savedEdit;
+  const version = edit?.version ?? 0;
+
   async function act(action: ReviewActionName) {
+    const isEdit = action === 'EDIT';
     setBusy(action);
     setActionError(null);
+    if (isEdit) {
+      setOptimisticEdit({
+        text: draft,
+        version: (savedEdit?.version ?? 0) + 1,
+        reviewer: 'you',
+        createdAt: new Date().toISOString(),
+      });
+      setLetterView('edited');
+    }
     try {
-      const res = await postReviewAction(
-        key,
-        action,
-        action === 'EDIT' ? { edited_letter: draft } : {},
-      );
+      const res = await postReviewAction(key, action, isEdit ? { edited_letter: draft } : {});
       setLastResult(res.status_label);
-      setDraftTouched(false);
+      // Keep the editor's text as saved: draftTouched stays true, so the seed effect does not overwrite it.
       onChanged();
       // Re-read so history and the saved-edit view stay in sync with Lakebase.
-      fetchCase(key).then(setDetail).catch(() => undefined);
+      fetchCase(key)
+        .then((d) => {
+          setDetail(d);
+          setOptimisticEdit(null);
+          setNow(new Date());
+        })
+        .catch(() => {
+          // The save succeeded; only the refresh failed. The optimistic copy stays as the saved text.
+          setActionError('Saved, but the case could not be refreshed. Reopen the case to confirm the latest version.');
+        });
     } catch (err) {
+      setOptimisticEdit(null);
       setActionError(err instanceof Error ? err.message : 'Action failed');
     } finally {
       setBusy(null);
@@ -211,29 +248,47 @@ export function CaseFileDialog({
           </TabsList>
           {docs.map((d) => (
             <TabsContent key={d.key} value={d.key} className="space-y-2">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-xs text-muted-foreground">{d.note}</p>
-                {d.url && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => window.open(d.url ?? '', '_blank', 'noopener,noreferrer')}
-                  >
-                    <ExternalLink className="mr-1.5 h-4 w-4" />
-                    Open in new tab
-                  </Button>
-                )}
-              </div>
-              {d.url ? (
-                <iframe
-                  src={d.url}
-                  title={`${d.title} for ${target.patient_name}`}
-                  className="h-[55vh] w-full rounded-md border bg-muted"
+              {d.key === 'letter' ? (
+                <LetterTab
+                  pdfUrl={d.url ?? null}
+                  patientName={target.patient_name}
+                  account={target.account}
+                  encounterNbr={target.encounter_nbr}
+                  aiDraft={letterText}
+                  edit={edit}
+                  view={letterView}
+                  onViewChange={setLetterView}
+                  showChanges={showChanges}
+                  onShowChangesChange={setShowChanges}
+                  now={now}
                 />
               ) : (
-                <Alert>
-                  <AlertDescription>No PDF available for this item.</AlertDescription>
-                </Alert>
+                <>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs text-muted-foreground">{d.note}</p>
+                    {d.url && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open(d.url ?? '', '_blank', 'noopener,noreferrer')}
+                      >
+                        <ExternalLink className="mr-1.5 h-4 w-4" />
+                        Open in new tab
+                      </Button>
+                    )}
+                  </div>
+                  {d.url ? (
+                    <iframe
+                      src={d.url}
+                      title={`${d.title} for ${target.patient_name}`}
+                      className="h-[55vh] w-full rounded-md border bg-muted"
+                    />
+                  ) : (
+                    <Alert>
+                      <AlertDescription>No PDF available for this item.</AlertDescription>
+                    </Alert>
+                  )}
+                </>
               )}
             </TabsContent>
           ))}
@@ -266,27 +321,34 @@ export function CaseFileDialog({
         </div>
         </div>
 
-        <DialogFooter className="shrink-0 flex-wrap gap-2 border-t pt-3 sm:justify-start">
-          <Button variant="outline" disabled={busy !== null || !draft.trim()} onClick={() => void act('EDIT')}>
-            <Save className="mr-1.5 h-4 w-4" />
-            {busy === 'EDIT' ? 'Saving…' : 'Save edit'}
-          </Button>
-          <Button disabled={busy !== null} onClick={() => void act('APPROVE')}>
-            <CheckCircle2 className="mr-1.5 h-4 w-4" />
-            Approve
-          </Button>
-          <Button variant="outline" disabled={busy !== null} onClick={() => void act('REJECT')}>
-            <Undo2 className="mr-1.5 h-4 w-4" />
-            Reject
-          </Button>
-          <Button variant="outline" disabled={busy !== null} onClick={() => void act('ROUTE_TO_REVIEW')}>
-            <ShieldAlert className="mr-1.5 h-4 w-4" />
-            Route to review
-          </Button>
-          <Button variant="outline" disabled={busy !== null} onClick={() => void act('SUBMIT')}>
-            <Send className="mr-1.5 h-4 w-4" />
-            Mark submitted
-          </Button>
+        <DialogFooter className="shrink-0 flex-col items-stretch gap-2 border-t pt-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-start">
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" disabled={busy !== null || !draft.trim()} onClick={() => void act('EDIT')}>
+              <Save className="mr-1.5 h-4 w-4" />
+              {busy === 'EDIT' ? 'Saving…' : 'Save edit'}
+            </Button>
+            <Button disabled={busy !== null} onClick={() => void act('APPROVE')}>
+              <CheckCircle2 className="mr-1.5 h-4 w-4" />
+              {approveLabel(version)}
+            </Button>
+            <Button variant="outline" disabled={busy !== null} onClick={() => void act('REJECT')}>
+              <Undo2 className="mr-1.5 h-4 w-4" />
+              Reject
+            </Button>
+            <Button variant="outline" disabled={busy !== null} onClick={() => void act('ROUTE_TO_REVIEW')}>
+              <ShieldAlert className="mr-1.5 h-4 w-4" />
+              Route to review
+            </Button>
+            <Button variant="outline" disabled={busy !== null} onClick={() => void act('SUBMIT')}>
+              <Send className="mr-1.5 h-4 w-4" />
+              {submitLabel(version)}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {version > 0
+              ? `Approve and Mark submitted apply to version ${version}, the latest saved edit.`
+              : 'Approve and Mark submitted apply to the AI draft. No edit is saved yet.'}
+          </p>
         </DialogFooter>
       </DialogContent>
     </Dialog>

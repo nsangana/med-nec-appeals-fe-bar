@@ -85,9 +85,10 @@ export function ChatPane({
   }
 
   return (
-    <div className="flex h-full flex-col rounded-lg border bg-card">
+    // Viewport-height column: header and composer are fixed, only the message list scrolls.
+    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border bg-card">
       {/* Header */}
-      <div className="border-b p-3">
+      <div className="shrink-0 border-b p-3">
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-primary" />
           <h2 className="text-sm font-semibold text-foreground">Appeals Assistant</h2>
@@ -114,7 +115,7 @@ export function ChatPane({
       </div>
 
       {/* Messages */}
-      <div ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto p-3">
+      <div ref={scrollRef} className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-3">
         {messages.length === 0 && !loading && (
           <div className="space-y-3 pt-2">
             <p className="text-xs text-muted-foreground">Try asking:</p>
@@ -169,7 +170,7 @@ export function ChatPane({
       </div>
 
       {/* Composer */}
-      <div className="border-t p-3">
+      <div className="shrink-0 border-t p-3">
         <form
           onSubmit={(e) => {
             e.preventDefault();

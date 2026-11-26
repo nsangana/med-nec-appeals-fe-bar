@@ -59,7 +59,13 @@ export interface CaseDetail {
     last_reviewer: string | null;
     last_action_at: string | null;
     submitted_at: string | null;
-    latest_edit: { edited_letter: string | null; reviewer: string | null; created_at: string | null } | null;
+    latest_edit: {
+      edited_letter: string | null;
+      reviewer: string | null;
+      created_at: string | null;
+      /** Edit count for the case; the latest saved edit is version N. */
+      version: number;
+    } | null;
     history: Array<{ id: string; action: string; reviewer: string; note: string | null; created_at: string }>;
   };
   files: {
